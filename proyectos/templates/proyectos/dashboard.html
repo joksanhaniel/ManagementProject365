@@ -1,0 +1,227 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}Dashboard - Sistema Constructora{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Responsive para dashboard */
+    @media (max-width: 768px) {
+        /* Tarjetas de estadísticas en columna en móvil */
+        .col-md-3 {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        /* Ajustar tamaño de iconos */
+        .stat-card i {
+            font-size: 2rem !important;
+        }
+
+        /* Tablas más pequeñas */
+        .table {
+            font-size: 0.85rem;
+        }
+
+        .table th,
+        .table td {
+            padding: 0.5rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        h2 {
+            font-size: 1.5rem;
+        }
+
+        .stat-card h3 {
+            font-size: 1.5rem;
+        }
+
+        .stat-card h6 {
+            font-size: 0.85rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+        <p class="text-muted">Resumen general del sistema</p>
+    </div>
+</div>
+
+<!-- Tarjetas de estadísticas -->
+<div class="row">
+    <div class="col-md-3">
+        <div class="card stat-card primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Proyectos Activos</h6>
+                        <h3 class="mb-0">{{ stats.proyectos_activos }}</h3>
+                    </div>
+                    <div class="text-primary">
+                        <i class="bi bi-briefcase" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Empleados Activos</h6>
+                        <h3 class="mb-0">{{ stats.empleados_activos }}</h3>
+                    </div>
+                    <div class="text-success">
+                        <i class="bi bi-people" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Gastos Pendientes</h6>
+                        <h3 class="mb-0">${{ stats.gastos_pendientes|floatformat:2 }}</h3>
+                    </div>
+                    <div class="text-warning">
+                        <i class="bi bi-exclamation-triangle" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card stat-card {% if stats.utilidad_total >= 0 %}success{% else %}danger{% endif %}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Utilidad Total</h6>
+                        <h3 class="mb-0 {% if stats.utilidad_total >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                            ${{ stats.utilidad_total|floatformat:2 }}
+                        </h3>
+                    </div>
+                    <div class="{% if stats.utilidad_total >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        <i class="bi bi-graph-up-arrow" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Proyectos con mejor y peor rendimiento -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Resumen de Utilidades por Proyecto</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Proyecto</th>
+                                <th>Cliente</th>
+                                <th>Estado</th>
+                                <th class="text-end">Monto Contrato</th>
+                                <th class="text-end">Costos Totales</th>
+                                <th class="text-end">Utilidad Bruta</th>
+                                <th class="text-end">Margen %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for proyecto in proyectos %}
+                            <tr>
+                                <td><strong>{{ proyecto.codigo }}</strong></td>
+                                <td>
+                                    <a href="{% url 'proyecto_detail' proyecto.id %}" class="text-decoration-none">
+                                        {{ proyecto.nombre }}
+                                    </a>
+                                </td>
+                                <td>{{ proyecto.cliente }}</td>
+                                <td>
+                                    {% if proyecto.estado == 'en_progreso' %}
+                                        <span class="badge bg-primary">En Progreso</span>
+                                    {% elif proyecto.estado == 'finalizado' %}
+                                        <span class="badge bg-success">Finalizado</span>
+                                    {% elif proyecto.estado == 'planificacion' %}
+                                        <span class="badge bg-info">Planificación</span>
+                                    {% elif proyecto.estado == 'suspendido' %}
+                                        <span class="badge bg-warning">Suspendido</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ proyecto.get_estado_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">${{ proyecto.monto_contrato|floatformat:2 }}</td>
+                                <td class="text-end">${{ proyecto.costos_totales|floatformat:2 }}</td>
+                                <td class="text-end {% if proyecto.utilidad_bruta >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                                    ${{ proyecto.utilidad_bruta|floatformat:2 }}
+                                </td>
+                                <td class="text-end {% if proyecto.margen_utilidad >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                                    {{ proyecto.margen_utilidad|floatformat:2 }}%
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted">
+                                    No hay proyectos registrados
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Acciones rápidas -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> Acciones Rápidas</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'proyecto_create' %}" class="btn btn-primary w-100">
+                            <i class="bi bi-plus-circle"></i> Nuevo Proyecto
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'empleado_create' %}" class="btn btn-success w-100">
+                            <i class="bi bi-person-plus"></i> Nuevo Empleado
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'planilla_create' %}" class="btn btn-info w-100">
+                            <i class="bi bi-file-plus"></i> Nueva Planilla
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'gasto_create' %}" class="btn btn-warning w-100">
+                            <i class="bi bi-cash"></i> Registrar Gasto
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

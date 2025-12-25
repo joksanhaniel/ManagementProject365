@@ -1,0 +1,75 @@
+{% extends 'proyectos/form_base.html' %}
+
+{% block form_title %}
+    <i class="bi bi-shop"></i> {% if object %}Editar Proveedor{% else %}Nuevo Proveedor{% endif %}
+{% endblock %}
+
+{% block form_content %}
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Código *</label>
+            {{ form.codigo }}
+            {% if form.codigo.errors %}<div class="text-danger">{{ form.codigo.errors }}</div>{% endif %}
+        </div>
+        <div class="col-md-8 mb-3">
+            <label class="form-label">Nombre o Razón Social *</label>
+            {{ form.nombre }}
+            {% if form.nombre.errors %}<div class="text-danger">{{ form.nombre.errors }}</div>{% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label class="form-label">RTN *</label>
+            {{ form.rtn }}
+            {% if form.rtn.errors %}<div class="text-danger">{{ form.rtn.errors }}</div>{% endif %}
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Tipo de Proveedor</label>
+            {{ form.tipo_proveedor }}
+            {% if form.tipo_proveedor.errors %}<div class="text-danger">{{ form.tipo_proveedor.errors }}</div>{% endif %}
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Teléfono</label>
+            {{ form.telefono }}
+            {% if form.telefono.errors %}<div class="text-danger">{{ form.telefono.errors }}</div>{% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Correo Electrónico</label>
+            {{ form.email }}
+            {% if form.email.errors %}<div class="text-danger">{{ form.email.errors }}</div>{% endif %}
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Persona de Contacto</label>
+            {{ form.contacto }}
+            {% if form.contacto.errors %}<div class="text-danger">{{ form.contacto.errors }}</div>{% endif %}
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Estado</label>
+            <div class="form-check">
+                {{ form.activo }}
+                <label class="form-check-label">Activo</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 mb-3">
+            <label class="form-label">Dirección</label>
+            {{ form.direccion }}
+            {% if form.direccion.errors %}<div class="text-danger">{{ form.direccion.errors }}</div>{% endif %}
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between mt-4">
+        <a href="{% url 'proveedores_list' %}" class="btn btn-secondary">
+            <i class="bi bi-x-circle"></i> Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save"></i> Guardar Proveedor
+        </button>
+    </div>
+{% endblock %}

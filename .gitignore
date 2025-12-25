@@ -1,0 +1,197 @@
+# Django
+*.log
+*.pot
+*.pyc
+__pycache__/
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+
+# Variables de entorno - NUNCA SUBIR
+.env
+.env.local
+.env.*.local
+
+# Credenciales - NUNCA SUBIR
+CREDENCIALES*.txt
+*_CREDENTIALS.txt
+passwords.txt
+
+# Migraciones locales (opcional, dependiendo del workflow)
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# Python
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.swm
+.DS_Store
+
+# SQL Server
+*.bak
+*.sql
+
+# Backups
+backups/
+*.backup
+
+# Logs
+logs/
+*.log
+
+# Archivos temporales
+*.tmp
+temp/
+tmp/
+nul
+
+# Archivos de configuración local
+local_config.py
+secrets.json
+
+# Archivos de bases de datos locales
+*.db
+*.sqlite
+*.sqlite3
+
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+.pyre/
+
+# Static files (collected)
+/static/
+/staticfiles/
+
+# Media files
+/media/
+
+# ====== ARCHIVOS DE DESARROLLO - NO SUBIR A PRODUCCIÓN ======
+
+# Archivos de documentación de desarrollo (mantener solo README.md)
+INSTRUCCIONES_*.md
+SISTEMA_*.md
+SEGURIDAD.md
+API_DOCUMENTATION.md
+ROLES_Y_USUARIOS.md
+*_GUIA.md
+*_MANUAL.md
+NOTAS*.md
+
+# Archivos de prueba y testing
+test_*.py
+*_test.py
+*/tests.py
+test_data/
+fixtures/test_*.json
+
+# Migraciones de desarrollo (comentar si quieres commitear migraciones)
+# IMPORTANTE: Si trabajas en equipo, NO ignores las migraciones
+# Si trabajas solo, puedes ignorarlas y recrearlas en producción
+proyectos/migrations/*.py
+!proyectos/migrations/__init__.py
+
+# Scripts de desarrollo
+scripts/dev_*
+scripts/test_*
+manage_local.py
+reset_db.py
+seed_data.py
+populate_*.py
+
+# Archivos de configuración de desarrollo
+settings_local.py
+local_settings.py
+dev_settings.py
+.env.development
+.env.local
+.env.dev
+
+# Bases de datos de desarrollo/prueba
+db_dev.sqlite3
+db_test.sqlite3
+test.db
+*.db-journal
+
+# Dumps de base de datos
+*.dump
+*.sql
+backups/*.sql
+dumps/
+
+# Archivos de ejemplo o plantilla
+*_TEMPLATE.*
+*_EXAMPLE.*
+ejemplo_*.py

@@ -1,0 +1,168 @@
+{% extends 'proyectos/form_base.html' %}
+
+{% block title %}{% if object %}Editar{% else %}Nuevo{% endif %} Proyecto{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="bi bi-briefcase"></i> {% if object %}Editar Proyecto{% else %}Nuevo Proyecto{% endif %}</h2>
+        <p class="text-muted">Complete la información del proyecto</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'proyectos_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Datos del Proyecto</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.codigo.id_for_label }}" class="form-label fw-semibold">
+                                Código <span class="text-danger">*</span>
+                            </label>
+                            {{ form.codigo }}
+                            {% if form.codigo.errors %}
+                            <div class="invalid-feedback d-block">{{ form.codigo.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.estado.id_for_label }}" class="form-label fw-semibold">
+                                Estado <span class="text-danger">*</span>
+                            </label>
+                            {{ form.estado }}
+                            {% if form.estado.errors %}
+                            <div class="invalid-feedback d-block">{{ form.estado.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.nombre.id_for_label }}" class="form-label fw-semibold">
+                            Nombre del Proyecto <span class="text-danger">*</span>
+                        </label>
+                        {{ form.nombre }}
+                        {% if form.nombre.errors %}
+                        <div class="invalid-feedback d-block">{{ form.nombre.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.descripcion.id_for_label }}" class="form-label fw-semibold">
+                            Descripción
+                        </label>
+                        {{ form.descripcion }}
+                        {% if form.descripcion.errors %}
+                        <div class="invalid-feedback d-block">{{ form.descripcion.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.cliente.id_for_label }}" class="form-label fw-semibold">
+                                Cliente <span class="text-danger">*</span>
+                            </label>
+                            {{ form.cliente }}
+                            {% if form.cliente.errors %}
+                            <div class="invalid-feedback d-block">{{ form.cliente.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.monto_contrato.id_for_label }}" class="form-label fw-semibold">
+                                Monto del Contrato <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                {{ form.monto_contrato }}
+                            </div>
+                            {% if form.monto_contrato.errors %}
+                            <div class="invalid-feedback d-block">{{ form.monto_contrato.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.direccion.id_for_label }}" class="form-label fw-semibold">
+                            Dirección del Proyecto <span class="text-danger">*</span>
+                        </label>
+                        {{ form.direccion }}
+                        {% if form.direccion.errors %}
+                        <div class="invalid-feedback d-block">{{ form.direccion.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.fecha_inicio.id_for_label }}" class="form-label fw-semibold">
+                                Fecha Inicio <span class="text-danger">*</span>
+                            </label>
+                            {{ form.fecha_inicio }}
+                            {% if form.fecha_inicio.errors %}
+                            <div class="invalid-feedback d-block">{{ form.fecha_inicio.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.fecha_fin_estimada.id_for_label }}" class="form-label fw-semibold">
+                                Fecha Fin Estimada <span class="text-danger">*</span>
+                            </label>
+                            {{ form.fecha_fin_estimada }}
+                            {% if form.fecha_fin_estimada.errors %}
+                            <div class="invalid-feedback d-block">{{ form.fecha_fin_estimada.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.fecha_fin_real.id_for_label }}" class="form-label fw-semibold">
+                                Fecha Fin Real
+                            </label>
+                            {{ form.fecha_fin_real }}
+                            {% if form.fecha_fin_real.errors %}
+                            <div class="invalid-feedback d-block">{{ form.fecha_fin_real.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.porcentaje_avance.id_for_label }}" class="form-label fw-semibold">
+                            Porcentaje de Avance (%)
+                        </label>
+                        {{ form.porcentaje_avance }}
+                        {% if form.porcentaje_avance.errors %}
+                        <div class="invalid-feedback d-block">{{ form.porcentaje_avance.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'proyectos_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-save"></i> Guardar Proyecto
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

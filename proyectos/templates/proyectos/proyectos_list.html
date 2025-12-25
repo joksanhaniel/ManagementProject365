@@ -1,0 +1,172 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}Proyectos - Sistema Constructora{% endblock %}
+
+{% block extra_css %}
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2><i class="bi bi-briefcase"></i> Proyectos</h2>
+        <p class="text-muted">Gestión de proyectos de construcción</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'proyecto_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Nuevo Proyecto
+        </a>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Proyecto</label>
+                <select name="proyecto" class="form-select" id="select-proyecto">
+                    <option value="">Todos los proyectos</option>
+                    {% for proy in todos_proyectos %}
+                        <option value="{{ proy.id }}" {% if filtro_proyecto == proy.id|stringformat:"s" %}selected{% endif %}>
+                            {{ proy }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Cliente</label>
+                <select name="cliente" class="form-select" id="select-cliente">
+                    <option value="">Todos los clientes</option>
+                    {% for cliente in clientes %}
+                        <option value="{{ cliente.id }}" {% if filtro_cliente == cliente.id|stringformat:"s" %}selected{% endif %}>
+                            {{ cliente.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Estado</label>
+                <select name="estado" class="form-select">
+                    <option value="">Todos los estados</option>
+                    {% for estado_val, estado_label in estados %}
+                        <option value="{{ estado_val }}" {% if filtro_estado == estado_val %}selected{% endif %}>
+                            {{ estado_label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-funnel"></i> Filtrar
+                </button>
+                <a href="{% url 'proyectos_list' %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Cliente</th>
+                        <th>Estado</th>
+                        <th class="text-end">Monto Contrato</th>
+                        <th class="text-end">Costos</th>
+                        <th class="text-end">Utilidad</th>
+                        <th class="text-end">Margen %</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for proyecto in proyectos %}
+                    <tr>
+                        <td><strong>{{ proyecto.codigo }}</strong></td>
+                        <td>{{ proyecto.nombre }}</td>
+                        <td>{% if proyecto.cliente %}{{ proyecto.cliente.nombre }}{% else %}Sin Cliente{% endif %}</td>
+                        <td>
+                            {% if proyecto.estado == 'en_progreso' %}
+                                <span class="badge bg-primary">En Progreso</span>
+                            {% elif proyecto.estado == 'finalizado' %}
+                                <span class="badge bg-success">Finalizado</span>
+                            {% elif proyecto.estado == 'planificacion' %}
+                                <span class="badge bg-info">Planificación</span>
+                            {% elif proyecto.estado == 'suspendido' %}
+                                <span class="badge bg-warning">Suspendido</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ proyecto.get_estado_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">${{ proyecto.monto_contrato|floatformat:2 }}</td>
+                        <td class="text-end">${{ proyecto.costos_totales|floatformat:2 }}</td>
+                        <td class="text-end {% if proyecto.utilidad_bruta >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                            ${{ proyecto.utilidad_bruta|floatformat:2 }}
+                        </td>
+                        <td class="text-end {% if proyecto.margen_utilidad >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                            {{ proyecto.margen_utilidad|floatformat:2 }}%
+                        </td>
+                        <td class="table-actions">
+                            <a href="{% url 'proyecto_detail' proyecto.id %}" class="btn btn-sm btn-info" title="Ver detalles">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'proyecto_update' proyecto.id %}" class="btn btn-sm btn-warning" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'proyecto_delete' proyecto.id %}" class="btn btn-sm btn-danger" title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted">
+                            No hay proyectos registrados
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- jQuery (requerido para Select2) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/es.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Inicializar Select2 en select de proyecto
+    $('#select-proyecto').select2({
+        theme: 'bootstrap-5',
+        language: 'es',
+        placeholder: 'Todos los proyectos',
+        allowClear: true,
+        width: '100%'
+    });
+
+    // Inicializar Select2 en select de cliente
+    $('#select-cliente').select2({
+        theme: 'bootstrap-5',
+        language: 'es',
+        placeholder: 'Todos los clientes',
+        allowClear: true,
+        width: '100%'
+    });
+});
+</script>
+{% endblock %}

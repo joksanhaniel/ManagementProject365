@@ -1,0 +1,364 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sistema Constructora{% endblock %}</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <style>
+        :root {
+            --sidebar-width: 250px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%);
+            padding-top: 20px;
+            z-index: 1000;
+            overflow-y: auto;
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 12px 20px;
+            margin: 5px 10px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .sidebar .nav-link i {
+            margin-right: 10px;
+            width: 20px;
+        }
+
+        /* Estilos para submenú */
+        .submenu-link {
+            padding-left: 50px !important;
+            font-size: 0.9rem;
+        }
+
+        .submenu-link:hover {
+            background: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .nav-item .nav-link[data-bs-toggle="collapse"] {
+            cursor: pointer;
+        }
+
+        .nav-item .nav-link[data-bs-toggle="collapse"]:not(.collapsed) i.bi-chevron-down {
+            transform: rotate(180deg);
+            transition: transform 0.3s;
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            min-height: 100vh;
+            background: #f8f9fa;
+            transition: margin-left 0.3s ease-in-out;
+        }
+
+        /* Botón hamburguesa para móvil */
+        .sidebar-toggle {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1001;
+            background: #1e3a8a;
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .sidebar-toggle:hover {
+            background: #1e40af;
+        }
+
+        /* Overlay para cerrar sidebar en móvil */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+
+        /* Tablas responsive */
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Ajustar padding en móvil */
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 10px;
+            }
+
+            .card-body {
+                padding: 15px;
+            }
+
+            /* Hacer botones más pequeños en móvil */
+            .btn-sm {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.75rem;
+            }
+
+            /* Stack de botones en móvil */
+            .table-actions .btn {
+                margin-bottom: 5px;
+            }
+        }
+
+        /* Responsive para tablets y móviles */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay.show {
+                display: block;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding-top: 60px;
+            }
+
+            .sidebar-toggle {
+                display: block;
+            }
+
+            /* Ajustar cards en móvil */
+            .card {
+                margin-bottom: 15px;
+            }
+
+            .card-header {
+                font-size: 0.95rem;
+            }
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background: white;
+            border-bottom: 2px solid #e9ecef;
+            font-weight: 600;
+        }
+
+        .stat-card {
+            border-left: 4px solid;
+        }
+
+        .stat-card.primary {
+            border-left-color: #0d6efd;
+        }
+
+        .stat-card.success {
+            border-left-color: #198754;
+        }
+
+        .stat-card.warning {
+            border-left-color: #ffc107;
+        }
+
+        .stat-card.danger {
+            border-left-color: #dc3545;
+        }
+
+        .badge-custom {
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+
+        .table-actions {
+            white-space: nowrap;
+        }
+
+        .profit-positive {
+            color: #198754;
+            font-weight: bold;
+        }
+
+        .profit-negative {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .sidebar-brand {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            padding: 10px 20px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-brand i {
+            margin-right: 10px;
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Botón hamburguesa para móvil -->
+    <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="bi bi-list fs-4"></i>
+    </button>
+
+    <!-- Overlay para cerrar sidebar en móvil -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <i class="bi bi-building"></i>
+            Constructora
+        </div>
+
+        <nav class="nav flex-column">
+            <!-- Dashboard -->
+            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+                <i class="bi bi-speedometer2"></i>Dashboard
+            </a>
+
+            <!-- Clientes -->
+            <a class="nav-link {% if 'clientes' in request.path %}active{% endif %}" href="{% url 'clientes_list' %}">
+                <i class="bi bi-person-lines-fill"></i>Clientes
+            </a>
+
+            <!-- Proveedores -->
+            <a class="nav-link {% if 'proveedores' in request.path %}active{% endif %}" href="{% url 'proveedores_list' %}">
+                <i class="bi bi-shop"></i>Proveedores
+            </a>
+
+            <!-- Empleados -->
+            <a class="nav-link {% if 'empleados' in request.path %}active{% endif %}" href="{% url 'empleados_list' %}">
+                <i class="bi bi-people"></i>Empleados
+            </a>
+
+            <!-- Proyectos -->
+            <a class="nav-link {% if 'proyectos' in request.path %}active{% endif %}" href="{% url 'proyectos_list' %}">
+                <i class="bi bi-briefcase"></i>Proyectos
+            </a>
+
+            <!-- Planillas -->
+            <a class="nav-link {% if 'planillas' in request.path %}active{% endif %}" href="{% url 'planillas_list' %}">
+                <i class="bi bi-file-earmark-text"></i>Planillas
+            </a>
+
+            <!-- Gastos -->
+            <a class="nav-link {% if 'gastos' in request.path %}active{% endif %}" href="{% url 'gastos_list' %}">
+                <i class="bi bi-receipt"></i>Gastos
+            </a>
+
+            <!-- Usuarios (Solo Administradores) -->
+            {% if user.is_authenticated and user.rol == 'administrador' %}
+            <a class="nav-link {% if 'usuarios' in request.path %}active{% endif %}" href="{% url 'usuarios_list' %}">
+                <i class="bi bi-people-fill"></i>Usuarios
+            </a>
+            {% endif %}
+
+            <!-- Administración -->
+            <a class="nav-link" href="/admin/">
+                <i class="bi bi-gear"></i>Administración
+            </a>
+
+            <!-- API REST -->
+            <a class="nav-link" href="/api/">
+                <i class="bi bi-code-slash"></i>API REST
+            </a>
+
+            <hr style="border-color: rgba(255,255,255,0.2); margin: 20px 10px;">
+
+            <!-- Cerrar Sesión -->
+            <a class="nav-link" href="{% url 'logout' %}">
+                <i class="bi bi-box-arrow-right"></i>Cerrar Sesión
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container-fluid">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Sidebar Toggle Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+            // Toggle sidebar
+            sidebarToggle.addEventListener('click', function() {
+                sidebar.classList.add('show');
+                sidebarOverlay.classList.add('show');
+            });
+
+            // Cerrar sidebar al hacer click en overlay
+            sidebarOverlay.addEventListener('click', function() {
+                sidebar.classList.remove('show');
+                sidebarOverlay.classList.remove('show');
+            });
+
+            // Cerrar sidebar al hacer click en un link (solo en móvil)
+            if (window.innerWidth <= 992) {
+                const navLinks = sidebar.querySelectorAll('.nav-link');
+                navLinks.forEach(link => {
+                    link.addEventListener('click', function() {
+                        sidebar.classList.remove('show');
+                        sidebarOverlay.classList.remove('show');
+                    });
+                });
+            }
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

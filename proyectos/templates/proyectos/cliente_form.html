@@ -1,0 +1,106 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}{% if object %}Editar Cliente{% else %}Nuevo Cliente{% endif %} - Sistema Constructora{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="bi bi-person-lines-fill"></i> {% if object %}Editar Cliente{% else %}Nuevo Cliente{% endif %}</h2>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h5 class="border-bottom pb-2">Información del Cliente</h5>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.codigo.id_for_label }}" class="form-label">Código *</label>
+                    {{ form.codigo }}
+                    {% if form.codigo.errors %}
+                        <div class="text-danger">{{ form.codigo.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-8 mb-3">
+                    <label for="{{ form.nombre.id_for_label }}" class="form-label">Nombre o Razón Social *</label>
+                    {{ form.nombre }}
+                    {% if form.nombre.errors %}
+                        <div class="text-danger">{{ form.nombre.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.rtn.id_for_label }}" class="form-label">RTN *</label>
+                    {{ form.rtn }}
+                    {% if form.rtn.errors %}
+                        <div class="text-danger">{{ form.rtn.errors }}</div>
+                    {% endif %}
+                    <small class="form-text text-muted">Formato: 01019012345678 (14 dígitos)</small>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.telefono.id_for_label }}" class="form-label">Teléfono</label>
+                    {{ form.telefono }}
+                    {% if form.telefono.errors %}
+                        <div class="text-danger">{{ form.telefono.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.email.id_for_label }}" class="form-label">Correo Electrónico</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <div class="text-danger">{{ form.email.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.contacto.id_for_label }}" class="form-label">Persona de Contacto</label>
+                    {{ form.contacto }}
+                    {% if form.contacto.errors %}
+                        <div class="text-danger">{{ form.contacto.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.direccion.id_for_label }}" class="form-label">Dirección</label>
+                    {{ form.direccion }}
+                    {% if form.direccion.errors %}
+                        <div class="text-danger">{{ form.direccion.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <div class="form-check">
+                        {{ form.activo }}
+                        <label class="form-check-label" for="{{ form.activo.id_for_label }}">
+                            Cliente Activo
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Guardar
+                    </button>
+                    <a href="{% url 'clientes_list' %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

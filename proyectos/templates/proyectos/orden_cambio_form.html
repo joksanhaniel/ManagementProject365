@@ -1,0 +1,143 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}
+    {% if orden %}Editar Orden de Cambio{% else %}Nueva Orden de Cambio{% endif %} - Sistema Constructora
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>
+            <i class="bi bi-tools"></i>
+            {% if orden %}
+                Editar Orden de Cambio: {{ orden.codigo }}
+            {% else %}
+                Nueva Orden de Cambio
+            {% endif %}
+        </h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% if proyecto_seleccionado %}{% url 'proyecto_detail' proyecto_seleccionado.id %}{% else %}{% url 'proyectos_list' %}{% endif %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Datos de la Orden de Cambio</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="proyecto" class="form-label">Proyecto <span class="text-danger">*</span></label>
+                        <select name="proyecto" id="proyecto" class="form-select" required {% if orden %}disabled{% endif %}>
+                            <option value="">Seleccionar proyecto...</option>
+                            {% for proyecto in proyectos %}
+                                <option value="{{ proyecto.id }}"
+                                    {% if proyecto_seleccionado and proyecto.id == proyecto_seleccionado.id %}selected{% endif %}>
+                                    {{ proyecto.codigo }} - {{ proyecto.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if orden %}
+                            <input type="hidden" name="proyecto" value="{{ orden.proyecto.id }}">
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="codigo" class="form-label">Código <span class="text-danger">*</span></label>
+                                <input type="text" name="codigo" id="codigo" class="form-control"
+                                       value="{% if orden %}{{ orden.codigo }}{% endif %}"
+                                       placeholder="Ej: OC-001" required>
+                                <small class="text-muted">Código único de la orden de cambio</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="monto_adicional" class="form-label">Monto Adicional <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" name="monto_adicional" id="monto_adicional" class="form-control"
+                                           step="0.01" min="0"
+                                           value="{% if orden %}{{ orden.monto_adicional }}{% endif %}"
+                                           placeholder="0.00" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">Descripción del Trabajo <span class="text-danger">*</span></label>
+                        <textarea name="descripcion" id="descripcion" class="form-control" rows="4"
+                                  placeholder="Describe el trabajo adicional o cambio solicitado..." required>{% if orden %}{{ orden.descripcion }}{% endif %}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="fecha_solicitud" class="form-label">Fecha Solicitud <span class="text-danger">*</span></label>
+                                <input type="date" name="fecha_solicitud" id="fecha_solicitud" class="form-control"
+                                       value="{% if orden %}{{ orden.fecha_solicitud|date:'Y-m-d' }}{% endif %}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="estado" class="form-label">Estado <span class="text-danger">*</span></label>
+                                <select name="estado" id="estado" class="form-select" required>
+                                    <option value="pendiente" {% if orden and orden.estado == 'pendiente' %}selected{% endif %}>Pendiente Aprobación</option>
+                                    <option value="aprobada" {% if orden and orden.estado == 'aprobada' %}selected{% endif %}>Aprobada</option>
+                                    <option value="en_ejecucion" {% if orden and orden.estado == 'en_ejecucion' %}selected{% endif %}>En Ejecución</option>
+                                    <option value="completada" {% if orden and orden.estado == 'completada' %}selected{% endif %}>Completada</option>
+                                    <option value="rechazada" {% if orden and orden.estado == 'rechazada' %}selected{% endif %}>Rechazada</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="fecha_aprobacion" class="form-label">Fecha Aprobación</label>
+                                <input type="date" name="fecha_aprobacion" id="fecha_aprobacion" class="form-control"
+                                       value="{% if orden and orden.fecha_aprobacion %}{{ orden.fecha_aprobacion|date:'Y-m-d' }}{% endif %}">
+                                <small class="text-muted">Solo si está aprobada</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Nota:</strong> Las órdenes de cambio en estado "Aprobada", "En Ejecución" o "Completada" se suman automáticamente al monto total del proyecto.
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% if proyecto_seleccionado %}{% url 'proyecto_detail' proyecto_seleccionado.id %}{% else %}{% url 'proyectos_list' %}{% endif %}"
+                           class="btn btn-secondary">
+                            <i class="bi bi-x"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check"></i>
+                            {% if orden %}Actualizar Orden{% else %}Crear Orden{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-completar fecha de solicitud si está vacía
+    document.addEventListener('DOMContentLoaded', function() {
+        const fechaSolicitud = document.getElementById('fecha_solicitud');
+        if (!fechaSolicitud.value) {
+            const today = new Date().toISOString().split('T')[0];
+            fechaSolicitud.value = today;
+        }
+    });
+</script>
+{% endblock %}

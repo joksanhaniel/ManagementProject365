@@ -1,0 +1,176 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}Usuarios - Sistema Constructora{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2><i class="bi bi-people-fill"></i> Usuarios del Sistema</h2>
+        <p class="text-muted">Gestión de usuarios y roles</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'usuario_create' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus-fill"></i> Nuevo Usuario
+        </a>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Rol</label>
+                <select name="rol" class="form-select">
+                    <option value="">Todos los roles</option>
+                    {% for rol_val, rol_label in roles %}
+                        <option value="{{ rol_val }}" {% if filtro_rol == rol_val %}selected{% endif %}>
+                            {{ rol_label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Estado</label>
+                <select name="is_active" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="1" {% if filtro_is_active == '1' %}selected{% endif %}>Activo</option>
+                    <option value="0" {% if filtro_is_active == '0' %}selected{% endif %}>Inactivo</option>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-funnel"></i> Filtrar
+                </button>
+                <a href="{% url 'usuarios_list' %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Nombre Completo</th>
+                        <th>Email</th>
+                        <th>Teléfono</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
+                        <th>Último Acceso</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios %}
+                    <tr>
+                        <td><strong>{{ usuario.username }}</strong></td>
+                        <td>{{ usuario.first_name }} {{ usuario.last_name }}</td>
+                        <td>{{ usuario.email|default:"-" }}</td>
+                        <td>{{ usuario.telefono|default:"-" }}</td>
+                        <td>
+                            {% if usuario.rol == 'administrador' %}
+                                <span class="badge bg-danger">{{ usuario.get_rol_display }}</span>
+                            {% elif usuario.rol == 'gerente_proyecto' %}
+                                <span class="badge bg-primary">{{ usuario.get_rol_display }}</span>
+                            {% elif usuario.rol == 'contador' %}
+                                <span class="badge bg-success">{{ usuario.get_rol_display }}</span>
+                            {% elif usuario.rol == 'supervisor_obra' %}
+                                <span class="badge bg-warning">{{ usuario.get_rol_display }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ usuario.get_rol_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if usuario.is_active %}
+                                <span class="badge bg-success">Activo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if usuario.last_login %}
+                                {{ usuario.last_login|date:"d/m/Y H:i" }}
+                            {% else %}
+                                <span class="text-muted">Nunca</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-actions">
+                            <a href="{% url 'usuario_update' usuario.id %}" class="btn btn-sm btn-warning" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'usuario_delete' usuario.id %}" class="btn btn-sm btn-danger" title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">
+                            No hay usuarios registrados
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Información sobre roles -->
+<div class="card mt-3">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Descripción de Roles</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6><span class="badge bg-danger">Administrador</span></h6>
+                <ul class="small">
+                    <li>Acceso total al sistema</li>
+                    <li>Gestión de usuarios</li>
+                    <li>Configuración del sistema</li>
+                </ul>
+
+                <h6><span class="badge bg-primary">Gerente de Proyecto</span></h6>
+                <ul class="small">
+                    <li>Crear/editar/eliminar proyectos</li>
+                    <li>Gestionar empleados y asignaciones</li>
+                    <li>Gestionar planillas y gastos</li>
+                    <li>Acceso completo a información financiera</li>
+                </ul>
+
+                <h6><span class="badge bg-success">Contador</span></h6>
+                <ul class="small">
+                    <li>Acceso a información financiera</li>
+                    <li>Gestionar planillas de pago</li>
+                    <li>Gestionar gastos</li>
+                    <li>Generar reportes financieros</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h6><span class="badge bg-warning">Supervisor de Obra</span></h6>
+                <ul class="small">
+                    <li>Gestionar asignaciones de empleados</li>
+                    <li>Consultar información de proyectos</li>
+                    <li>Registro de asistencias</li>
+                    <li>Sin acceso a información financiera completa</li>
+                </ul>
+
+                <h6><span class="badge bg-secondary">Consultor</span></h6>
+                <ul class="small">
+                    <li>Solo lectura de proyectos</li>
+                    <li>Consultar reportes</li>
+                    <li>Sin permisos de escritura</li>
+                    <li>Sin acceso a información financiera sensible</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

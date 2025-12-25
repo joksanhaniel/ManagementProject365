@@ -1,0 +1,145 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}Proveedores - Sistema Constructora{% endblock %}
+
+{% block extra_css %}
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2><i class="bi bi-shop"></i> Proveedores</h2>
+        <p class="text-muted">Gestión de proveedores</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'proveedor_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Nuevo Proveedor
+        </a>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Proveedor</label>
+                <select name="proveedor" class="form-select">
+                    <option value="">Todos los proveedores</option>
+                    {% for prov in todos_proveedores %}
+                        <option value="{{ prov.id }}" {% if filtro_proveedor == prov.id|stringformat:"s" %}selected{% endif %}>
+                            {{ prov.codigo }} - {{ prov.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Estado</label>
+                <select name="activo" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="1" {% if filtro_activo == '1' %}selected{% endif %}>Activo</option>
+                    <option value="0" {% if filtro_activo == '0' %}selected{% endif %}>Inactivo</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Tipo</label>
+                <select name="tipo_proveedor" class="form-select">
+                    <option value="">Todos</option>
+                    {% for tipo in tipos_proveedor_unicos %}
+                        <option value="{{ tipo }}" {% if filtro_tipo_proveedor == tipo %}selected{% endif %}>
+                            {{ tipo }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2" title="Filtrar">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+                <a href="{% url 'proveedores_list' %}" class="btn btn-secondary" title="Limpiar">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre / Razón Social</th>
+                        <th>RTN</th>
+                        <th>Tipo</th>
+                        <th>Teléfono</th>
+                        <th>Contacto</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for proveedor in proveedores %}
+                    <tr>
+                        <td><strong>{{ proveedor.codigo }}</strong></td>
+                        <td>{{ proveedor.nombre }}</td>
+                        <td>{{ proveedor.rtn }}</td>
+                        <td>{{ proveedor.tipo_proveedor|default:"-" }}</td>
+                        <td>{{ proveedor.telefono|default:"-" }}</td>
+                        <td>{{ proveedor.contacto|default:"-" }}</td>
+                        <td>
+                            {% if proveedor.activo %}
+                                <span class="badge bg-success">Activo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-actions">
+                            <a href="{% url 'proveedor_update' proveedor.id %}" class="btn btn-sm btn-warning" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'proveedor_delete' proveedor.id %}" class="btn btn-sm btn-danger" title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">
+                            No hay proveedores registrados
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- jQuery (requerido para Select2) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/es.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Inicializar Select2 en select de proveedor
+    $('select[name="proveedor"]').select2({
+        theme: 'bootstrap-5',
+        language: 'es',
+        placeholder: 'Todos los proveedores',
+        allowClear: true,
+        width: '100%'
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,153 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}Planillas - Sistema Constructora{% endblock %}
+
+{% block extra_css %}
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2><i class="bi bi-file-earmark-text"></i> Planillas</h2>
+        <p class="text-muted">Gestión de planillas de pago</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'planilla_create' %}" class="btn btn-primary">
+            <i class="bi bi-file-plus"></i> Nueva Planilla
+        </a>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Proyecto</label>
+                <select name="proyecto" class="form-select">
+                    <option value="">Todos los proyectos</option>
+                    {% for proyecto in proyectos %}
+                        <option value="{{ proyecto.id }}" {% if filtro_proyecto == proyecto.id|stringformat:"s" %}selected{% endif %}>
+                            {{ proyecto.codigo }} - {{ proyecto.nombre|truncatewords:3 }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Tipo</label>
+                <select name="tipo_planilla" class="form-select">
+                    <option value="">Todos los tipos</option>
+                    {% for tipo_val, tipo_label in tipos_planilla %}
+                        <option value="{{ tipo_val }}" {% if filtro_tipo_planilla == tipo_val %}selected{% endif %}>
+                            {{ tipo_label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Estado Pago</label>
+                <select name="pagada" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="1" {% if filtro_pagada == '1' %}selected{% endif %}>Pagada</option>
+                    <option value="0" {% if filtro_pagada == '0' %}selected{% endif %}>Pendiente</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Fecha Desde</label>
+                <input type="date" name="fecha_desde" class="form-control" value="{{ filtro_fecha_desde }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Fecha Hasta</label>
+                <input type="date" name="fecha_hasta" class="form-control" value="{{ filtro_fecha_hasta }}">
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2" title="Filtrar">
+                    <i class="bi bi-funnel"></i>
+                </button>
+                <a href="{% url 'planillas_list' %}" class="btn btn-secondary" title="Limpiar">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Proyecto</th>
+                        <th>Tipo</th>
+                        <th>Período</th>
+                        <th>Fecha Pago</th>
+                        <th class="text-end">Monto Total</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for planilla in planillas %}
+                    <tr>
+                        <td><strong>{{ planilla.proyecto.codigo }}</strong> - {{ planilla.proyecto.nombre|truncatewords:5 }}</td>
+                        <td>
+                            <span class="badge bg-info">{{ planilla.get_tipo_planilla_display }}</span>
+                        </td>
+                        <td>{{ planilla.periodo_inicio|date:"d/m/Y" }} - {{ planilla.periodo_fin|date:"d/m/Y" }}</td>
+                        <td>{{ planilla.fecha_pago|date:"d/m/Y" }}</td>
+                        <td class="text-end"><strong>${{ planilla.monto_total|floatformat:2 }}</strong></td>
+                        <td>
+                            {% if planilla.pagada %}
+                                <span class="badge bg-success">Pagada</span>
+                            {% else %}
+                                <span class="badge bg-warning">Pendiente</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-actions">
+                            <a href="{% url 'planilla_update' planilla.id %}" class="btn btn-sm btn-warning" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'planilla_delete' planilla.id %}" class="btn btn-sm btn-danger" title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            No hay planillas registradas
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- jQuery (requerido para Select2) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/es.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Inicializar Select2 en select de proyecto
+    $('select[name="proyecto"]').select2({
+        theme: 'bootstrap-5',
+        language: 'es',
+        placeholder: 'Todos los proyectos',
+        allowClear: true,
+        width: '100%'
+    });
+});
+</script>
+{% endblock %}

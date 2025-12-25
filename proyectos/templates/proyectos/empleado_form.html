@@ -1,0 +1,99 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}{% if object %}Editar{% else %}Nuevo{% endif %} Empleado{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="bi bi-person"></i> {% if object %}Editar Empleado{% else %}Nuevo Empleado{% endif %}</h2>
+        <p class="text-muted">Complete la información del empleado</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'empleados_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Datos del Empleado</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <h6 class="border-bottom pb-2 mb-3">Información Personal</h6>
+                    <div class="row">
+                        {% for field in form %}
+                            {% if field.name in 'codigo,nombres,apellidos,dni,rtn,telefono,direccion' %}
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                                    {{ field.label }}
+                                    {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {{ field }}
+                                {% if field.errors %}
+                                <div class="invalid-feedback d-block">{{ field.errors }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <h6 class="border-bottom pb-2 mb-3 mt-4">Información Laboral</h6>
+                    <div class="row">
+                        {% for field in form %}
+                            {% if field.name in 'cargo,tipo_contrato,salario_base,fecha_ingreso,activo' %}
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                                    {{ field.label }}
+                                    {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {% if field.name == 'salario_base' %}
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    {{ field }}
+                                </div>
+                                {% elif field.name == 'activo' %}
+                                <div class="form-check">
+                                    {{ field }}
+                                    <label class="form-check-label" for="{{ field.id_for_label }}">
+                                        Empleado activo
+                                    </label>
+                                </div>
+                                {% else %}
+                                    {{ field }}
+                                {% endif %}
+                                {% if field.errors %}
+                                <div class="invalid-feedback d-block">{{ field.errors }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'empleados_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-save"></i> Guardar Empleado
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

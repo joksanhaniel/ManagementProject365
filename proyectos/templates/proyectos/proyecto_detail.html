@@ -1,0 +1,468 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}{{ proyecto.nombre }} - Sistema Constructora{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="bi bi-briefcase"></i> {{ proyecto.nombre }}</h2>
+        <p class="text-muted">{{ proyecto.codigo }} - {% if proyecto.cliente %}{{ proyecto.cliente.nombre }}{% else %}Sin Cliente{% endif %}</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'proyecto_update' proyecto.id %}" class="btn btn-warning">
+            <i class="bi bi-pencil"></i> Editar
+        </a>
+        <a href="{% url 'proyectos_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<!-- Información Financiera -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card primary">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Contrato Original</h6>
+                <h4>${{ monto_contrato_original|floatformat:2 }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Órdenes de Cambio</h6>
+                <h4>${{ total_ordenes_cambio|floatformat:2 }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card success">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Monto Total Proyecto</h6>
+                <h4>${{ monto_total_proyecto|floatformat:2 }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card {% if saldo_pendiente <= 0 %}success{% else %}warning{% endif %}">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Saldo Pendiente</h6>
+                <h4>${{ saldo_pendiente|floatformat:2 }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estado de Pagos del Cliente -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-cash-stack"></i> Estado de Pagos del Cliente</h5>
+                <a href="{% url 'pago_create' %}?proyecto={{ proyecto.id }}" class="btn btn-sm btn-success">
+                    <i class="bi bi-plus"></i> Registrar Pago
+                </a>
+            </div>
+            <div class="card-body">
+                <!-- Barra de Progreso de Pagos -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span><strong>Pagado:</strong> ${{ total_pagado|floatformat:2 }} ({{ porcentaje_pagado|floatformat:1 }}%)</span>
+                        <span><strong>Pendiente:</strong> ${{ saldo_pendiente|floatformat:2 }}</span>
+                    </div>
+                    <div class="progress" style="height: 30px;">
+                        <div class="progress-bar bg-success" role="progressbar"
+                             style="width: {{ porcentaje_pagado }}%;"
+                             aria-valuenow="{{ porcentaje_pagado }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ porcentaje_pagado|floatformat:1 }}%
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de Desembolsos -->
+                <h6 class="mb-3">Historial de Pagos (Desembolsos)</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Concepto</th>
+                                <th>Forma de Pago</th>
+                                <th>Referencia</th>
+                                <th class="text-end">Monto</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pago in desembolsos %}
+                            <tr>
+                                <td>{{ pago.fecha_pago|date:"d/m/Y" }}</td>
+                                <td>{{ pago.concepto|default:"Desembolso del proyecto" }}</td>
+                                <td><span class="badge bg-info">{{ pago.get_forma_pago_display }}</span></td>
+                                <td>{{ pago.numero_referencia|default:"-" }}</td>
+                                <td class="text-end"><strong>${{ pago.monto|floatformat:2 }}</strong></td>
+                                <td class="table-actions">
+                                    <a href="{% url 'pago_update' pago.id %}" class="btn btn-sm btn-warning" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'pago_delete' pago.id %}" class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">No hay pagos registrados</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-active">
+                            <tr>
+                                <th colspan="4" class="text-end">Total Pagado:</th>
+                                <th class="text-end">${{ total_pagado|floatformat:2 }}</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Órdenes de Cambio -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-tools"></i> Órdenes de Cambio / Trabajos Adicionales</h5>
+                <a href="{% url 'orden_cambio_create' %}?proyecto={{ proyecto.id }}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus"></i> Nueva Orden de Cambio
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Descripción</th>
+                                <th>Fecha Solicitud</th>
+                                <th>Fecha Aprobación</th>
+                                <th class="text-end">Monto Adicional</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for orden in ordenes_cambio %}
+                            <tr>
+                                <td><strong>{{ orden.codigo }}</strong></td>
+                                <td>{{ orden.descripcion|truncatewords:15 }}</td>
+                                <td>{{ orden.fecha_solicitud|date:"d/m/Y" }}</td>
+                                <td>
+                                    {% if orden.fecha_aprobacion %}
+                                        {{ orden.fecha_aprobacion|date:"d/m/Y" }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end"><strong>${{ orden.monto_adicional|floatformat:2 }}</strong></td>
+                                <td>
+                                    {% if orden.estado == 'pendiente' %}
+                                        <span class="badge bg-warning">Pendiente</span>
+                                    {% elif orden.estado == 'aprobada' %}
+                                        <span class="badge bg-success">Aprobada</span>
+                                    {% elif orden.estado == 'en_ejecucion' %}
+                                        <span class="badge bg-primary">En Ejecución</span>
+                                    {% elif orden.estado == 'completada' %}
+                                        <span class="badge bg-info">Completada</span>
+                                    {% elif orden.estado == 'rechazada' %}
+                                        <span class="badge bg-danger">Rechazada</span>
+                                    {% endif %}
+                                </td>
+                                <td class="table-actions">
+                                    <a href="{% url 'orden_cambio_update' orden.id %}" class="btn btn-sm btn-warning" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'orden_cambio_delete' orden.id %}" class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">No hay órdenes de cambio registradas</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-active">
+                            <tr>
+                                <th colspan="4" class="text-end">Total Órdenes Aprobadas:</th>
+                                <th class="text-end">${{ total_ordenes_cambio|floatformat:2 }}</th>
+                                <th colspan="2"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resumen Financiero con Órdenes de Cambio -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Costos Totales</h6>
+                <h4>${{ costos_totales|floatformat:2 }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card {% if utilidad_bruta >= 0 %}success{% else %}danger{% endif %}">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Utilidad Bruta</h6>
+                <h4 class="{% if utilidad_bruta >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                    ${{ utilidad_bruta|floatformat:2 }}
+                </h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card {% if margen_utilidad >= 0 %}success{% else %}danger{% endif %}">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Margen Utilidad</h6>
+                <h4 class="{% if margen_utilidad >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                    {{ margen_utilidad|floatformat:2 }}%
+                </h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detalles del Proyecto -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Información del Proyecto</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="40%">Estado:</th>
+                        <td>
+                            {% if proyecto.estado == 'en_progreso' %}
+                                <span class="badge bg-primary">En Progreso</span>
+                            {% elif proyecto.estado == 'finalizado' %}
+                                <span class="badge bg-success">Finalizado</span>
+                            {% elif proyecto.estado == 'planificacion' %}
+                                <span class="badge bg-info">Planificación</span>
+                            {% elif proyecto.estado == 'suspendido' %}
+                                <span class="badge bg-warning">Suspendido</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ proyecto.get_estado_display }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Avance:</th>
+                        <td>
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar" role="progressbar" style="width: {{ proyecto.porcentaje_avance }}%;">
+                                    {{ proyecto.porcentaje_avance }}%
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Fecha Inicio:</th>
+                        <td>{{ proyecto.fecha_inicio|date:"d/m/Y" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Fecha Fin Estimada:</th>
+                        <td>{{ proyecto.fecha_fin_estimada|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% if proyecto.fecha_fin_real %}
+                    <tr>
+                        <th>Fecha Fin Real:</th>
+                        <td>{{ proyecto.fecha_fin_real|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <th>Dirección:</th>
+                        <td>{{ proyecto.direccion }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Desglose de Costos</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="60%">Contrato Original:</th>
+                        <td class="text-end">${{ monto_contrato_original|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <th>Órdenes de Cambio:</th>
+                        <td class="text-end">+${{ total_ordenes_cambio|floatformat:2 }}</td>
+                    </tr>
+                    <tr class="table-primary">
+                        <th><strong>Monto Total Proyecto:</strong></th>
+                        <td class="text-end"><strong>${{ monto_total_proyecto|floatformat:2 }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2"><hr></td>
+                    </tr>
+                    <tr>
+                        <th>Total Planillas:</th>
+                        <td class="text-end">${{ total_planillas|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <th>Total Gastos:</th>
+                        <td class="text-end">${{ total_gastos|floatformat:2 }}</td>
+                    </tr>
+                    <tr class="table-active">
+                        <th><strong>Costos Totales:</strong></th>
+                        <td class="text-end"><strong>${{ costos_totales|floatformat:2 }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2"><hr></td>
+                    </tr>
+                    <tr class="table-{% if utilidad_bruta >= 0 %}success{% else %}danger{% endif %}">
+                        <th><strong>Utilidad Bruta:</strong></th>
+                        <td class="text-end">
+                            <strong class="{% if utilidad_bruta >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                                ${{ utilidad_bruta|floatformat:2 }}
+                            </strong>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Empleados Asignados -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Empleados Asignados</h5>
+                <a href="{% url 'asignacion_create' %}?proyecto={{ proyecto.id }}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus"></i> Asignar Empleado
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Empleado</th>
+                                <th>Cargo</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for asignacion in proyecto.asignaciones.all %}
+                            <tr>
+                                <td>{{ asignacion.empleado.nombre_completo }}</td>
+                                <td>{{ asignacion.empleado.cargo }}</td>
+                                <td>
+                                    {% if asignacion.activo %}
+                                        <span class="badge bg-success">Activo</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactivo</span>
+                                    {% endif %}
+                                </td>
+                                <td class="table-actions">
+                                    <a href="{% url 'asignacion_update' asignacion.id %}" class="btn btn-sm btn-warning" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'asignacion_delete' asignacion.id %}" class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No hay empleados asignados</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gastos del Proyecto -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Gastos del Proyecto</h5>
+                <a href="{% url 'gasto_create' %}?proyecto={{ proyecto.id }}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus"></i> Registrar Gasto
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Descripción</th>
+                                <th>Proveedor</th>
+                                <th class="text-end">Monto</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for gasto in proyecto.gastos.all|slice:":10" %}
+                            <tr>
+                                <td>{{ gasto.fecha_gasto|date:"d/m/Y" }}</td>
+                                <td><span class="badge bg-info">{{ gasto.get_tipo_gasto_display }}</span></td>
+                                <td>{{ gasto.descripcion|truncatewords:10 }}</td>
+                                <td>{{ gasto.proveedor|default:"-" }}</td>
+                                <td class="text-end">${{ gasto.monto|floatformat:2 }}</td>
+                                <td>
+                                    {% if gasto.pagado %}
+                                        <span class="badge bg-success">Pagado</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Pendiente</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">No hay gastos registrados</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-active">
+                                <th colspan="4" class="text-end">Total Gastos:</th>
+                                <th class="text-end">${{ total_gastos|floatformat:2 }}</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

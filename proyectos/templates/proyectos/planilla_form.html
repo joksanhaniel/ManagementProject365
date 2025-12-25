@@ -1,0 +1,1424 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}{% if object %}Editar{% else %}Nueva{% endif %} Planilla{% endblock %}
+
+{% block extra_css %}
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
+<style>
+    /* Responsive para formulario de planilla */
+    @media (max-width: 768px) {
+        /* Hacer columnas de formulario de ancho completo en móvil */
+        .col-md-6, .col-md-4, .col-md-8 {
+            width: 100%;
+        }
+
+        /* Tabla de empleados scrollable horizontal */
+        #empleados-table {
+            font-size: 0.85rem;
+        }
+
+        #empleados-table th,
+        #empleados-table td {
+            padding: 0.5rem;
+            white-space: nowrap;
+        }
+
+        /* Ajustar inputs en tabla */
+        #empleados-table input,
+        #empleados-table select {
+            font-size: 0.85rem;
+            min-width: 100px;
+        }
+
+        /* Botones de acción más pequeños */
+        #empleados-table .btn-sm {
+            padding: 0.2rem 0.4rem;
+            font-size: 0.75rem;
+        }
+
+        /* Header de cards */
+        .card-header h5 {
+            font-size: 1rem;
+        }
+
+        /* Botones de ayuda rápida */
+        .btn-group {
+            flex-direction: column;
+        }
+
+        .btn-group .btn {
+            margin-bottom: 5px;
+        }
+
+        /* Espaciado del botón Volver */
+        .text-end {
+            text-align: left !important;
+            margin-top: 10px;
+        }
+    }
+
+    @media (max-width: 576px) {
+        /* Extra small devices */
+        h2 {
+            font-size: 1.5rem;
+        }
+
+        .card-header {
+            padding: 10px;
+        }
+
+        .card-body {
+            padding: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="bi bi-file-earmark-text"></i> {% if object %}Editar Planilla{% else %}Nueva Planilla{% endif %}</h2>
+        <p class="text-muted">Complete la información de la planilla y agregue los empleados</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'planillas_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<form method="post" id="planilla-form" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+        {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    <!-- ENCABEZADO DE PLANILLA -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-info-circle"></i> Datos de la Planilla</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.proyecto.id_for_label }}" class="form-label fw-semibold">
+                        {{ form.proyecto.label }}
+                        <span class="text-danger">*</span>
+                    </label>
+                    {{ form.proyecto }}
+                    {% if form.proyecto.errors %}
+                    <div class="invalid-feedback d-block">{{ form.proyecto.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.tipo_planilla.id_for_label }}" class="form-label fw-semibold">
+                        {{ form.tipo_planilla.label }}
+                        <span class="text-danger">*</span>
+                    </label>
+                    {{ form.tipo_planilla }}
+                    <div class="alert alert-info mt-2 py-2 px-3" id="tipo-ayuda" style="display:none; font-size: 0.875rem;">
+                        <i class="bi bi-info-circle"></i> <span id="tipo-texto"></span>
+                    </div>
+                    {% if form.tipo_planilla.errors %}
+                    <div class="invalid-feedback d-block">{{ form.tipo_planilla.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-12 mb-3">
+                    <div class="card bg-light">
+                        <div class="card-body py-2">
+                            <small class="text-muted">
+                                <i class="bi bi-lightbulb"></i>
+                                <strong>Ayuda rápida:</strong>
+                                <button type="button" class="btn btn-sm btn-outline-primary ms-2" id="btn-primera-quincena">
+                                    <i class="bi bi-calendar-check"></i> 1ra Quincena
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary ms-1" id="btn-segunda-quincena">
+                                    <i class="bi bi-calendar-check"></i> 2da Quincena
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-success ms-1" id="btn-mes-actual">
+                                    <i class="bi bi-calendar3"></i> Mes Actual
+                                </button>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.periodo_inicio.id_for_label }}" class="form-label fw-semibold">
+                        {{ form.periodo_inicio.label }}
+                        <span class="text-danger">*</span>
+                    </label>
+                    {{ form.periodo_inicio }}
+                    {% if form.periodo_inicio.errors %}
+                    <div class="invalid-feedback d-block">{{ form.periodo_inicio.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.periodo_fin.id_for_label }}" class="form-label fw-semibold">
+                        {{ form.periodo_fin.label }}
+                        <span class="text-danger">*</span>
+                    </label>
+                    {{ form.periodo_fin }}
+                    {% if form.periodo_fin.errors %}
+                    <div class="invalid-feedback d-block">{{ form.periodo_fin.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.fecha_pago.id_for_label }}" class="form-label fw-semibold">
+                        {{ form.fecha_pago.label }}
+                        <span class="text-danger">*</span>
+                    </label>
+                    {{ form.fecha_pago }}
+                    {% if form.fecha_pago.errors %}
+                    <div class="invalid-feedback d-block">{{ form.fecha_pago.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-12 mb-3">
+                    <label for="{{ form.observaciones.id_for_label }}" class="form-label fw-semibold">
+                        {{ form.observaciones.label }}
+                    </label>
+                    {{ form.observaciones }}
+                    {% if form.observaciones.errors %}
+                    <div class="invalid-feedback d-block">{{ form.observaciones.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-12">
+                    <div class="form-check">
+                        {{ form.pagada }}
+                        <label class="form-check-label" for="{{ form.pagada.id_for_label }}">
+                            Planilla pagada
+                        </label>
+                    </div>
+                    {% if form.pagada.errors %}
+                    <div class="invalid-feedback d-block">{{ form.pagada.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DETALLES DE PLANILLA (EMPLEADOS) -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-people"></i> Empleados en esta Planilla</h5>
+            <button type="button" class="btn btn-light btn-sm" id="add-empleado">
+                <i class="bi bi-plus-circle"></i> Agregar Empleado
+            </button>
+        </div>
+        <div class="card-body">
+            {{ formset.management_form }}
+
+            {% if formset.non_form_errors %}
+            <div class="alert alert-danger">
+                {{ formset.non_form_errors }}
+            </div>
+            {% endif %}
+
+            <div class="table-responsive">
+                <table class="table table-bordered" id="empleados-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 50%;">Empleado <span class="text-danger">*</span></th>
+                            <th style="width: 35%;">Salario Devengado</th>
+                            <th style="width: 10%;">Total</th>
+                            <th style="width: 5%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="empleados-tbody">
+                        {% for form in formset %}
+                        {% if form.instance.pk or form.empleado.value %}
+                        <tr class="empleado-row" data-empleado-id="{{ form.instance.empleado.id|default:'' }}" data-detalle-id="{{ form.instance.id|default:'' }}">
+                            <td>
+                                {{ form.id }}
+                                {{ form.empleado }}
+                                {% if form.empleado.errors %}
+                                <div class="invalid-feedback d-block">{{ form.empleado.errors }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    {{ form.salario_devengado }}
+                                </div>
+                                {% if form.salario_devengado.errors %}
+                                <div class="invalid-feedback d-block">{{ form.salario_devengado.errors }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong class="total-empleado">{% if form.instance.pk %}${{ form.instance.calcular_total|floatformat:2 }}{% else %}$0.00{% endif %}</strong>
+                            </td>
+                            <td>
+                                {{ form.DELETE }}
+                                <button type="button" class="btn btn-sm btn-danger remove-empleado" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-primary fw-bold">
+                            <td colspan="2" class="text-end">TOTAL PLANILLA:</td>
+                            <td colspan="2"><span id="total-planilla">${{ object.monto_total|default:"0.00"|floatformat:2 }}</span></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- BONIFICACIONES -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-gift"></i> Bonificaciones de esta Planilla</h5>
+            <button type="button" class="btn btn-light btn-sm" id="add-bonificacion">
+                <i class="bi bi-plus-circle"></i> Agregar Bonificación
+            </button>
+        </div>
+        <div class="card-body">
+            {{ bonificacion_formset.management_form }}
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 30%;">Empleado</th>
+                            <th style="width: 40%;">Descripción</th>
+                            <th style="width: 20%;">Monto</th>
+                            <th style="width: 10%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="bonificaciones-tbody">
+                        {% for form in bonificacion_formset %}
+                        {% if form.instance.pk or form.empleado.value or form.descripcion.value or form.monto.value %}
+                        <tr class="bonificacion-row">
+                            <td>
+                                {{ form.id }}
+                                {{ form.empleado }}
+                                {% if form.empleado.errors %}
+                                <div class="invalid-feedback d-block">{{ form.empleado.errors }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ form.descripcion }}
+                                {% if form.descripcion.errors %}
+                                <div class="invalid-feedback d-block">{{ form.descripcion.errors }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">L.</span>
+                                    {{ form.monto }}
+                                </div>
+                                {% if form.monto.errors %}
+                                <div class="invalid-feedback d-block">{{ form.monto.errors }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ form.DELETE }}
+                                <button type="button" class="btn btn-sm btn-danger remove-bonificacion" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-info mt-3">
+                <i class="bi bi-info-circle"></i>
+                <strong>Nota:</strong> Las bonificaciones se sumarán automáticamente al total de cada empleado. El total de la planilla se actualiza en tiempo real.
+            </div>
+        </div>
+    </div>
+
+    <!-- HORAS EXTRA -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-clock-history"></i> Horas Extra de esta Planilla</h5>
+            <button type="button" class="btn btn-light btn-sm" id="add-horaextra">
+                <i class="bi bi-plus-circle"></i> Agregar Horas Extra
+            </button>
+        </div>
+        <div class="card-body">
+            {{ horaextra_formset.management_form }}
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 25%;">Empleado</th>
+                            <th style="width: 30%;">Descripción</th>
+                            <th style="width: 15%;">Cantidad Horas</th>
+                            <th style="width: 20%;">Monto</th>
+                            <th style="width: 10%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="horasextra-tbody">
+                        {% for form in horaextra_formset %}
+                        {% if form.instance.pk or form.empleado.value or form.descripcion.value or form.cantidad_horas.value or form.monto.value %}
+                        <tr class="horaextra-row">
+                            <td>
+                                {{ form.id }}
+                                {{ form.empleado }}
+                                {% if form.empleado.errors %}
+                                <div class="invalid-feedback d-block">{{ form.empleado.errors }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ form.descripcion }}
+                                {% if form.descripcion.errors %}
+                                <div class="invalid-feedback d-block">{{ form.descripcion.errors }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ form.cantidad_horas }}
+                                {% if form.cantidad_horas.errors %}
+                                <div class="invalid-feedback d-block">{{ form.cantidad_horas.errors }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">L.</span>
+                                    {{ form.monto }}
+                                </div>
+                                {% if form.monto.errors %}
+                                <div class="invalid-feedback d-block">{{ form.monto.errors }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ form.DELETE }}
+                                <button type="button" class="btn btn-sm btn-danger remove-horaextra" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-info mt-3">
+                <i class="bi bi-info-circle"></i>
+                <strong>Nota:</strong> El monto de las horas extra se sumará al salario del empleado.
+            </div>
+        </div>
+    </div>
+
+    <!-- DEDUCCIONES -->
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-dash-circle"></i> Deducciones de esta Planilla</h5>
+            <button type="button" class="btn btn-dark btn-sm" id="add-deduccion">
+                <i class="bi bi-plus-circle"></i> Agregar Deducción
+            </button>
+        </div>
+        <div class="card-body">
+            {{ deduccion_formset.management_form }}
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 30%;">Empleado</th>
+                            <th style="width: 40%;">Descripción</th>
+                            <th style="width: 20%;">Monto</th>
+                            <th style="width: 10%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="deducciones-tbody">
+                        {% for form in deduccion_formset %}
+                        {% if form.instance.pk or form.empleado.value or form.descripcion.value or form.monto.value %}
+                        <tr class="deduccion-row">
+                            <td>
+                                {{ form.id }}
+                                {{ form.empleado }}
+                                {% if form.empleado.errors %}
+                                <div class="invalid-feedback d-block">{{ form.empleado.errors }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ form.descripcion }}
+                                {% if form.descripcion.errors %}
+                                <div class="invalid-feedback d-block">{{ form.descripcion.errors }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">L.</span>
+                                    {{ form.monto }}
+                                </div>
+                                {% if form.monto.errors %}
+                                <div class="invalid-feedback d-block">{{ form.monto.errors }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ form.DELETE }}
+                                <button type="button" class="btn btn-sm btn-danger remove-deduccion" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-info mt-3">
+                <i class="bi bi-info-circle"></i>
+                <strong>Nota:</strong> Las deducciones que agregues aquí se aplicarán a los empleados especificados.
+                El campo "Deducciones" en la tabla de empleados arriba es calculado automáticamente a partir de estas deducciones detalladas.
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTONES DE ACCIÓN -->
+    <div class="d-flex justify-content-between mb-5">
+        <a href="{% url 'planillas_list' %}" class="btn btn-secondary btn-lg">
+            <i class="bi bi-x-circle"></i> Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="bi bi-save"></i> Guardar Planilla
+        </button>
+    </div>
+</form>
+
+<script>
+// ============================================
+// DATOS DE EMPLEADOS (Salarios)
+// ============================================
+const empleadosSalarios = {{ empleados_salarios|safe }};
+
+// Lista de empleados para los selects
+const empleadosList = [
+    {% for empleado in empleados_list %}
+    { id: {{ empleado.id }}, nombre: "{{ empleado.codigo }} - {{ empleado.nombre_completo }}" },
+    {% endfor %}
+];
+
+// ============================================
+// FUNCIONES DE CÁLCULO DE PERÍODOS
+// ============================================
+
+// Formatear fecha para input type="date" (YYYY-MM-DD)
+function formatearFecha(fecha) {
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// Obtener último día del mes
+function ultimoDiaMes(year, month) {
+    return new Date(year, month + 1, 0).getDate();
+}
+
+// Calcular primera quincena
+function calcularPrimeraQuincena() {
+    const hoy = new Date();
+    const year = hoy.getFullYear();
+    const month = hoy.getMonth();
+
+    const inicio = new Date(year, month, 1);
+    const fin = new Date(year, month, 15);
+    const pago = new Date(year, month, 15); // Pago día 15
+
+    return { inicio, fin, pago };
+}
+
+// Calcular segunda quincena
+function calcularSegundaQuincena() {
+    const hoy = new Date();
+    const year = hoy.getFullYear();
+    const month = hoy.getMonth();
+    const ultimoDia = ultimoDiaMes(year, month);
+
+    const inicio = new Date(year, month, 16);
+    const fin = new Date(year, month, ultimoDia);
+    const pago = new Date(year, month, ultimoDia); // Pago último día del mes
+
+    return { inicio, fin, pago };
+}
+
+// Calcular mes completo
+function calcularMesCompleto() {
+    const hoy = new Date();
+    const year = hoy.getFullYear();
+    const month = hoy.getMonth();
+    const ultimoDia = ultimoDiaMes(year, month);
+
+    const inicio = new Date(year, month, 1);
+    const fin = new Date(year, month, ultimoDia);
+    const pago = new Date(year, month, ultimoDia); // Pago último día del mes
+
+    return { inicio, fin, pago };
+}
+
+// Aplicar fechas a los campos
+function aplicarFechas(periodo) {
+    document.querySelector('[name="periodo_inicio"]').value = formatearFecha(periodo.inicio);
+    document.querySelector('[name="periodo_fin"]').value = formatearFecha(periodo.fin);
+    document.querySelector('[name="fecha_pago"]').value = formatearFecha(periodo.pago);
+}
+
+// Mostrar ayuda según tipo de planilla
+function mostrarAyudaTipo() {
+    const tipoPlanilla = document.querySelector('[name="tipo_planilla"]').value;
+    const ayudaDiv = document.getElementById('tipo-ayuda');
+    const textoSpan = document.getElementById('tipo-texto');
+
+    const ayudas = {
+        'quincenal': '<strong>Quincenal:</strong> 1ra quincena (01-15, pago día 15) | 2da quincena (16-último día, pago último día). <em>Salario calculado: Base/2</em>',
+        'mensual': '<strong>Mensual:</strong> Del día 1 al último día del mes (pago último día). <em>Salario calculado: Base completo</em>',
+        'semanal': '<strong>Semanal:</strong> Período de 6 días laborables (Lunes a Sábado). <em>Salario calculado: Base/4</em>'
+    };
+
+    if (tipoPlanilla && ayudas[tipoPlanilla]) {
+        textoSpan.innerHTML = ayudas[tipoPlanilla];
+        ayudaDiv.style.display = 'block';
+    } else {
+        ayudaDiv.style.display = 'none';
+    }
+}
+
+// Cargar empleados asignados al proyecto seleccionado
+function cargarEmpleadosProyecto(proyectoId) {
+    if (!proyectoId) return;
+
+    const proyectoSelect = document.querySelector('[name="proyecto"]');
+
+    fetch(`/proyectos/${proyectoId}/empleados/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.empleados && data.empleados.length > 0) {
+                const tbody = document.getElementById('empleados-tbody');
+
+                console.log('Cargando', data.empleados.length, 'empleados del proyecto');
+
+                // Agregar cada empleado del proyecto
+                data.empleados.forEach((empleado, index) => {
+                    // Verificar si el empleado ya está en la tabla
+                    const empleadoYaExiste = Array.from(tbody.querySelectorAll('.empleado-select'))
+                        .some(select => select.value == empleado.id);
+
+                    if (!empleadoYaExiste) {
+                        // Buscar una fila vacía existente para usar
+                        let filaVacia = null;
+                        tbody.querySelectorAll('tr.empleado-row').forEach(row => {
+                            const selectEmpleado = row.querySelector('.empleado-select');
+                            if (selectEmpleado && !selectEmpleado.value && !filaVacia) {
+                                filaVacia = row;
+                            }
+                        });
+
+                        // Si encontramos una fila vacía, usarla; si no, crear una nueva
+                        if (filaVacia) {
+                            // Usar la fila vacía existente
+                            const selectEmpleado = filaVacia.querySelector('.empleado-select');
+                            selectEmpleado.value = empleado.id;
+
+                            // Actualizar el salario del empleado en el diccionario
+                            empleadosSalarios[empleado.id] = empleado.salario_base;
+
+                            // Cargar salario automáticamente
+                            cargarSalarioEmpleado(selectEmpleado);
+                        } else {
+                            // No hay fila vacía, crear una nueva
+                            document.getElementById('add-empleado').click();
+
+                            // Esperar un momento para que se agregue la fila
+                            setTimeout(() => {
+                                const ultimaFila = tbody.querySelector('tr.empleado-row:last-child');
+                                const selectEmpleado = ultimaFila.querySelector('.empleado-select');
+
+                                // Seleccionar el empleado
+                                selectEmpleado.value = empleado.id;
+
+                                // Actualizar el salario del empleado en el diccionario
+                                empleadosSalarios[empleado.id] = empleado.salario_base;
+
+                                // Cargar salario automáticamente
+                                cargarSalarioEmpleado(selectEmpleado);
+                            }, 100 * index); // Pequeño delay entre cada empleado
+                        }
+                    }
+                });
+
+                // NO bloquear el proyecto en modo creación
+                // El proyecto solo está bloqueado en modo edición (ver script de Bootstrap Select)
+                console.log('Empleados cargados desde proyecto:', data.empleados.length);
+            } else {
+                console.log('No se encontraron empleados asignados al proyecto');
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar empleados del proyecto:', error);
+        });
+}
+
+// ============================================
+// FUNCIÓN PARA RESETEAR DATOS DE LA PLANILLA
+// ============================================
+
+function resetearDatosPlanilla() {
+    console.log('Reseteando datos de la planilla...');
+
+    // Limpiar todas las filas de empleados
+    document.querySelectorAll('.empleado-row').forEach(row => {
+        row.remove();
+    });
+
+    // Limpiar todas las bonificaciones
+    document.querySelectorAll('.bonificacion-row').forEach(row => {
+        row.remove();
+    });
+
+    // Limpiar todas las deducciones
+    document.querySelectorAll('.deduccion-row').forEach(row => {
+        row.remove();
+    });
+
+    // Limpiar todas las horas extra
+    document.querySelectorAll('.horaextra-row').forEach(row => {
+        row.remove();
+    });
+
+    // Resetear contadores de formsets
+    const empleadosTotal = document.querySelector('[name$="TOTAL_FORMS"]');
+    if (empleadosTotal) empleadosTotal.value = '0';
+
+    const bonificacionesTotal = document.querySelector('[name$="bonificaciones-TOTAL_FORMS"]');
+    if (bonificacionesTotal) bonificacionesTotal.value = '0';
+
+    const deduccionesTotal = document.querySelector('[name$="deducciones-TOTAL_FORMS"]');
+    if (deduccionesTotal) deduccionesTotal.value = '0';
+
+    const horasExtraTotal = document.querySelector('[name$="horas_extra-TOTAL_FORMS"]');
+    if (horasExtraTotal) horasExtraTotal.value = '0';
+
+    // Resetear totales
+    const totalPlanillaElement = document.getElementById('total-planilla');
+    if (totalPlanillaElement) {
+        totalPlanillaElement.textContent = '$0.00';
+    }
+
+    console.log('Datos reseteados exitosamente');
+}
+
+// ============================================
+// FUNCIONES PARA EMPLEADOS
+// ============================================
+
+// Calcular salario devengado basado en tipo de planilla
+// Semanal: salario_base / 4 (4 semanas por mes)
+// Quincenal: salario_base / 2 (2 quincenas por mes)
+// Mensual: salario_base (salario completo)
+function calcularSalarioDevengado(salarioMensual, tipoPlanilla) {
+    switch(tipoPlanilla) {
+        case 'semanal':
+            return salarioMensual / 4; // 4 semanas por mes
+        case 'quincenal':
+            return salarioMensual / 2; // 2 quincenas por mes
+        case 'mensual':
+            return salarioMensual; // Salario completo
+        default:
+            return salarioMensual;
+    }
+}
+
+// Cargar y auto-calcular salario devengado cuando se selecciona un empleado
+function cargarSalarioEmpleado(selectEmpleado) {
+    const empleadoId = selectEmpleado.value;
+    const row = selectEmpleado.closest('tr');
+
+    if (empleadoId && empleadosSalarios[empleadoId]) {
+        // Obtener salario mensual (base) del empleado
+        const salarioMensual = empleadosSalarios[empleadoId];
+
+        // Obtener tipo de planilla
+        const tipoPlanilla = document.querySelector('[name="tipo_planilla"]').value;
+
+        // Calcular salario devengado automáticamente
+        const salarioDevengado = calcularSalarioDevengado(salarioMensual, tipoPlanilla);
+
+        // Llenar el campo de salario devengado
+        const salarioDevengadoInput = row.querySelector('.salario-devengado');
+        if (salarioDevengadoInput) {
+            salarioDevengadoInput.value = salarioDevengado.toFixed(2);
+        }
+
+        // Calcular total del empleado
+        calcularTotalEmpleado(row);
+    }
+}
+
+// Agregar listener a un select de empleado
+function agregarListenerEmpleado(selectEmpleado) {
+    selectEmpleado.addEventListener('change', function() {
+        cargarSalarioEmpleado(this);
+    });
+}
+
+// ============================================
+// FUNCIONES PARA CALCULAR TOTALES (simplificadas)
+// ============================================
+
+function calcularTotalEmpleado(row) {
+    // Ahora usamos la función completa que considera bonificaciones, deducciones y horas extra
+    calcularTotalPlanillaCompleto();
+}
+
+function calcularTotalPlanilla() {
+    // Ahora usamos la función completa que considera bonificaciones, deducciones y horas extra
+    calcularTotalPlanillaCompleto();
+}
+
+// Esta función antigua ya no se usa, pero la dejamos comentada por si acaso
+function calcularTotalPlanillaSimple_OLD() {
+    let total = 0;
+    document.querySelectorAll('.empleado-row').forEach(row => {
+        if (!row.querySelector('[name$="DELETE"]')?.checked) {
+            const salario = parseFloat(row.querySelector('.salario-devengado').value) || 0;
+            const bonificaciones = parseFloat(row.querySelector('[name$="bonificaciones"]').value) || 0;
+            const deducciones = parseFloat(row.querySelector('[name$="deducciones"]').value) || 0;
+            total += salario + bonificaciones - deducciones;
+        }
+    });
+    document.getElementById('total-planilla').textContent = '$' + total.toFixed(2);
+}
+
+// ============================================
+// EVENT LISTENERS
+// ============================================
+
+// Función global para verificar si se deben cargar empleados
+function intentarCargarEmpleados() {
+    const proyectoSelect = document.querySelector('[name="proyecto"]');
+    const tipoPlanillaSelect = document.querySelector('[name="tipo_planilla"]');
+    const proyectoId = proyectoSelect?.value;
+    const tipoPlanilla = tipoPlanillaSelect?.value;
+
+    console.log('intentarCargarEmpleados - Proyecto:', proyectoId, 'Tipo:', tipoPlanilla);
+
+    // Solo cargar si ambos están seleccionados
+    if (proyectoId && tipoPlanilla) {
+        cargarEmpleadosProyecto(proyectoId);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const proyectoSelect = document.querySelector('[name="proyecto"]');
+    const tipoPlanillaSelect = document.querySelector('[name="tipo_planilla"]');
+
+    // Listener para selección de proyecto
+    if (proyectoSelect) {
+        proyectoSelect.addEventListener('change', function() {
+            // Si cambia el proyecto en modo creación, resetear datos
+            {% if not object %}
+            resetearDatosPlanilla();
+            {% endif %}
+            intentarCargarEmpleados();
+        });
+    }
+
+    // Listener para tipo de planilla
+    if (tipoPlanillaSelect) {
+        tipoPlanillaSelect.addEventListener('change', function() {
+            mostrarAyudaTipo();
+            intentarCargarEmpleados();
+        });
+        mostrarAyudaTipo(); // Mostrar al cargar si ya hay valor
+    }
+
+    // Al cargar la página (modo edición), verificar si se deben cargar empleados
+    if (proyectoSelect?.value && tipoPlanillaSelect?.value) {
+        const empleadosExistentes = document.querySelectorAll('.empleado-row .empleado-select');
+        const tieneEmpleadosSeleccionados = Array.from(empleadosExistentes).some(select => select.value);
+
+        if (!tieneEmpleadosSeleccionados) {
+            cargarEmpleadosProyecto(proyectoSelect.value);
+        }
+    }
+
+    // Botones de ayuda rápida
+    document.getElementById('btn-primera-quincena').addEventListener('click', function() {
+        document.querySelector('[name="tipo_planilla"]').value = 'quincenal';
+        mostrarAyudaTipo();
+        aplicarFechas(calcularPrimeraQuincena());
+        intentarCargarEmpleados();
+    });
+
+    document.getElementById('btn-segunda-quincena').addEventListener('click', function() {
+        document.querySelector('[name="tipo_planilla"]').value = 'quincenal';
+        mostrarAyudaTipo();
+        aplicarFechas(calcularSegundaQuincena());
+        intentarCargarEmpleados();
+    });
+
+    document.getElementById('btn-mes-actual').addEventListener('click', function() {
+        document.querySelector('[name="tipo_planilla"]').value = 'mensual';
+        mostrarAyudaTipo();
+        aplicarFechas(calcularMesCompleto());
+        intentarCargarEmpleados();
+    });
+
+    // Agregar listeners a empleados existentes
+    document.querySelectorAll('.empleado-row').forEach(row => {
+        // Listener para select de empleado
+        const selectEmpleado = row.querySelector('.empleado-select');
+        if (selectEmpleado) {
+            agregarListenerEmpleado(selectEmpleado);
+        }
+
+        // Calcular total inicial para empleados existentes
+        calcularTotalEmpleado(row);
+    });
+
+    // Recalcular totales después de un pequeño delay para asegurar que todo esté cargado
+    setTimeout(() => {
+        document.querySelectorAll('.empleado-row').forEach(row => {
+            calcularTotalEmpleado(row);
+        });
+        calcularTotalPlanilla();
+    }, 100);
+});
+
+// Agregar nuevo empleado
+document.getElementById('add-empleado').addEventListener('click', function() {
+    const tbody = document.getElementById('empleados-tbody');
+    const totalForms = document.querySelector('[name$="TOTAL_FORMS"]');
+
+    if (!totalForms) {
+        console.error('No se encontró el campo TOTAL_FORMS');
+        return;
+    }
+
+    const formIdx = parseInt(totalForms.value);
+
+    // Generar opciones de empleados desde la lista
+    let empleadosOptions = '<option value="">---------</option>';
+    empleadosOptions += empleadosList.map(emp =>
+        `<option value="${emp.id}">${emp.nombre}</option>`
+    ).join('');
+
+    // Crear una nueva fila desde cero
+    const newRow = document.createElement('tr');
+    newRow.className = 'empleado-row';
+
+    newRow.innerHTML = `
+        <td>
+            <input type="hidden" name="detalles-${formIdx}-id" id="id_detalles-${formIdx}-id">
+            <select name="detalles-${formIdx}-empleado" id="id_detalles-${formIdx}-empleado"
+                    class="form-select empleado-select">
+                ${empleadosOptions}
+            </select>
+        </td>
+        <td>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text">$</span>
+                <input type="number" name="detalles-${formIdx}-salario_devengado"
+                       class="form-control salario-devengado" step="0.01" placeholder="0.00"
+                       id="id_detalles-${formIdx}-salario_devengado" readonly>
+            </div>
+        </td>
+        <td>
+            <strong class="total-empleado">$0.00</strong>
+        </td>
+        <td>
+            <input type="checkbox" name="detalles-${formIdx}-DELETE"
+                   id="id_detalles-${formIdx}-DELETE" style="display:none;">
+            <button type="button" class="btn btn-sm btn-danger remove-empleado" title="Eliminar">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>
+    `;
+
+    tbody.appendChild(newRow);
+    totalForms.value = formIdx + 1;
+
+    // Agregar listeners
+    const selectEmpleado = newRow.querySelector('.empleado-select');
+    if (selectEmpleado) {
+        agregarListenerEmpleado(selectEmpleado);
+    }
+
+    newRow.querySelector('.remove-empleado').addEventListener('click', function() {
+        const deleteCheckbox = newRow.querySelector('[name$="DELETE"]');
+        if (deleteCheckbox) {
+            deleteCheckbox.checked = true;
+        }
+        newRow.style.display = 'none';
+        calcularTotalPlanilla();
+    });
+});
+
+// Botones de eliminar
+document.querySelectorAll('.remove-empleado').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const row = this.closest('tr');
+        const deleteCheckbox = row.querySelector('[name$="DELETE"]');
+        if (deleteCheckbox) {
+            deleteCheckbox.checked = true;
+        }
+        row.style.display = 'none';
+        calcularTotalPlanilla();
+    });
+});
+
+// ============================================
+// GESTIÓN DE DEDUCCIONES
+// ============================================
+
+// Agregar nueva deducción
+const addDeduccionBtn = document.getElementById('add-deduccion');
+if (addDeduccionBtn) {
+    addDeduccionBtn.addEventListener('click', function() {
+        const tbody = document.getElementById('deducciones-tbody');
+        const totalForms = document.querySelector('[name$="deducciones-TOTAL_FORMS"]');
+
+        if (!totalForms) {
+            console.error('No se encontró el campo TOTAL_FORMS para deducciones');
+            return;
+        }
+
+        const formIdx = parseInt(totalForms.value);
+
+        // Generar opciones de empleados desde la lista
+        const empleadosOptions = '<option value="">---------</option>' + empleadosList.map(emp =>
+            `<option value="${emp.id}">${emp.nombre}</option>`
+        ).join('');
+
+        // Crear una nueva fila desde cero
+        const newRow = document.createElement('tr');
+        newRow.className = 'deduccion-row';
+
+        newRow.innerHTML = `
+            <td>
+                <input type="hidden" name="deducciones-${formIdx}-id" id="id_deducciones-${formIdx}-id">
+                <select name="deducciones-${formIdx}-empleado" id="id_deducciones-${formIdx}-empleado" class="form-select">
+                    ${empleadosOptions}
+                </select>
+            </td>
+            <td>
+                <input type="text" name="deducciones-${formIdx}-descripcion"
+                       class="form-control"
+                       placeholder="IHSS, ISR, Préstamo, Anticipo..."
+                       id="id_deducciones-${formIdx}-descripcion">
+            </td>
+            <td>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">L.</span>
+                    <input type="number" name="deducciones-${formIdx}-monto"
+                           class="form-control"
+                           step="0.01"
+                           placeholder="0.00"
+                           id="id_deducciones-${formIdx}-monto">
+                </div>
+            </td>
+            <td>
+                <input type="checkbox" name="deducciones-${formIdx}-DELETE" id="id_deducciones-${formIdx}-DELETE" style="display:none;">
+                <button type="button" class="btn btn-sm btn-danger remove-deduccion" title="Eliminar">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(newRow);
+        totalForms.value = formIdx + 1;
+
+        // Agregar listener al botón eliminar de la nueva fila
+        newRow.querySelector('.remove-deduccion').addEventListener('click', function() {
+            const deleteCheckbox = newRow.querySelector('[name$="DELETE"]');
+            if (deleteCheckbox) {
+                deleteCheckbox.checked = true;
+            }
+            newRow.style.display = 'none';
+            calcularTotalPlanillaCompleto(); // Recalcular total al eliminar
+        });
+    });
+}
+
+// Botones de eliminar deducciones
+document.querySelectorAll('.remove-deduccion').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const row = this.closest('tr');
+        const deleteCheckbox = row.querySelector('[name$="DELETE"]');
+        if (deleteCheckbox) {
+            deleteCheckbox.checked = true;
+        }
+        row.style.display = 'none';
+        calcularTotalPlanillaCompleto(); // Recalcular total al eliminar
+    });
+});
+
+// ============================================
+// GESTIÓN DE BONIFICACIONES
+// ============================================
+
+// Agregar nueva bonificación
+const addBonificacionBtn = document.getElementById('add-bonificacion');
+if (addBonificacionBtn) {
+    addBonificacionBtn.addEventListener('click', function() {
+        const tbody = document.getElementById('bonificaciones-tbody');
+        const totalForms = document.querySelector('[name$="bonificaciones-TOTAL_FORMS"]');
+
+        if (!totalForms) {
+            console.error('No se encontró el campo TOTAL_FORMS para bonificaciones');
+            return;
+        }
+
+        const formIdx = parseInt(totalForms.value);
+
+        // Generar opciones de empleados desde la lista
+        const empleadosOptions = '<option value="">---------</option>' + empleadosList.map(emp =>
+            `<option value="${emp.id}">${emp.nombre}</option>`
+        ).join('');
+
+        // Crear una nueva fila desde cero
+        const newRow = document.createElement('tr');
+        newRow.className = 'bonificacion-row';
+
+        newRow.innerHTML = `
+            <td>
+                <input type="hidden" name="bonificaciones-${formIdx}-id" id="id_bonificaciones-${formIdx}-id">
+                <select name="bonificaciones-${formIdx}-empleado" id="id_bonificaciones-${formIdx}-empleado" class="form-select">
+                    ${empleadosOptions}
+                </select>
+            </td>
+            <td>
+                <input type="text" name="bonificaciones-${formIdx}-descripcion"
+                       class="form-control"
+                       placeholder="Bono por desempeño, Incentivo..."
+                       id="id_bonificaciones-${formIdx}-descripcion">
+            </td>
+            <td>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">L.</span>
+                    <input type="number" name="bonificaciones-${formIdx}-monto"
+                           class="form-control"
+                           step="0.01"
+                           placeholder="0.00"
+                           id="id_bonificaciones-${formIdx}-monto">
+                </div>
+            </td>
+            <td>
+                <input type="checkbox" name="bonificaciones-${formIdx}-DELETE" id="id_bonificaciones-${formIdx}-DELETE" style="display:none;">
+                <button type="button" class="btn btn-sm btn-danger remove-bonificacion" title="Eliminar">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(newRow);
+        totalForms.value = formIdx + 1;
+
+        // Agregar listener al botón eliminar de la nueva fila
+        newRow.querySelector('.remove-bonificacion').addEventListener('click', function() {
+            const deleteCheckbox = newRow.querySelector('[name$="DELETE"]');
+            if (deleteCheckbox) {
+                deleteCheckbox.checked = true;
+            }
+            newRow.style.display = 'none';
+            calcularTotalPlanillaCompleto(); // Recalcular total al eliminar
+        });
+    });
+}
+
+// Botones de eliminar bonificaciones
+document.querySelectorAll('.remove-bonificacion').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const row = this.closest('tr');
+        const deleteCheckbox = row.querySelector('[name$="DELETE"]');
+        if (deleteCheckbox) {
+            deleteCheckbox.checked = true;
+        }
+        row.style.display = 'none';
+        calcularTotalPlanillaCompleto(); // Recalcular total al eliminar
+    });
+});
+
+// ============================================
+// GESTIÓN DE HORAS EXTRA
+// ============================================
+
+// Agregar nueva hora extra
+const addHoraExtraBtn = document.getElementById('add-horaextra');
+if (addHoraExtraBtn) {
+    addHoraExtraBtn.addEventListener('click', function() {
+        const tbody = document.getElementById('horasextra-tbody');
+        const totalForms = document.querySelector('[name$="horas_extra-TOTAL_FORMS"]');
+
+        if (!totalForms) {
+            console.error('No se encontró el campo TOTAL_FORMS para horas extra');
+            return;
+        }
+
+        const formIdx = parseInt(totalForms.value);
+
+        // Generar opciones de empleados desde la lista
+        const empleadosOptions = '<option value="">---------</option>' + empleadosList.map(emp =>
+            `<option value="${emp.id}">${emp.nombre}</option>`
+        ).join('');
+
+        // Crear una nueva fila desde cero
+        const newRow = document.createElement('tr');
+        newRow.className = 'horaextra-row';
+
+        newRow.innerHTML = `
+            <td>
+                <input type="hidden" name="horas_extra-${formIdx}-id" id="id_horas_extra-${formIdx}-id">
+                <select name="horas_extra-${formIdx}-empleado" id="id_horas_extra-${formIdx}-empleado" class="form-select">
+                    ${empleadosOptions}
+                </select>
+            </td>
+            <td>
+                <input type="text" name="horas_extra-${formIdx}-descripcion"
+                       class="form-control"
+                       placeholder="Trabajo nocturno, Fin de semana..."
+                       id="id_horas_extra-${formIdx}-descripcion">
+            </td>
+            <td>
+                <input type="number" name="horas_extra-${formIdx}-cantidad_horas"
+                       class="form-control"
+                       step="0.01"
+                       placeholder="0.00"
+                       id="id_horas_extra-${formIdx}-cantidad_horas">
+            </td>
+            <td>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">L.</span>
+                    <input type="number" name="horas_extra-${formIdx}-monto"
+                           class="form-control"
+                           step="0.01"
+                           placeholder="0.00"
+                           id="id_horas_extra-${formIdx}-monto">
+                </div>
+            </td>
+            <td>
+                <input type="checkbox" name="horas_extra-${formIdx}-DELETE" id="id_horas_extra-${formIdx}-DELETE" style="display:none;">
+                <button type="button" class="btn btn-sm btn-danger remove-horaextra" title="Eliminar">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(newRow);
+        totalForms.value = formIdx + 1;
+
+        // Agregar listener al botón eliminar de la nueva fila
+        newRow.querySelector('.remove-horaextra').addEventListener('click', function() {
+            const deleteCheckbox = newRow.querySelector('[name$="DELETE"]');
+            if (deleteCheckbox) {
+                deleteCheckbox.checked = true;
+            }
+            newRow.style.display = 'none';
+            calcularTotalPlanillaCompleto(); // Recalcular total al eliminar
+        });
+    });
+}
+
+// Botones de eliminar horas extra
+document.querySelectorAll('.remove-horaextra').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const row = this.closest('tr');
+        const deleteCheckbox = row.querySelector('[name$="DELETE"]');
+        if (deleteCheckbox) {
+            deleteCheckbox.checked = true;
+        }
+        row.style.display = 'none';
+        calcularTotalPlanillaCompleto(); // Recalcular total al eliminar
+    });
+});
+
+// ============================================
+// CÁLCULO AUTOMÁTICO DEL TOTAL EN TIEMPO REAL
+// ============================================
+
+// Función mejorada para calcular el total de la planilla con bonificaciones, deducciones y horas extra
+function calcularTotalPlanillaCompleto() {
+    let totalGeneral = 0;
+
+    // Recorrer cada empleado
+    document.querySelectorAll('.empleado-row').forEach(row => {
+        // Saltar si está marcado para eliminar
+        if (row.querySelector('[name$="DELETE"]')?.checked) {
+            return;
+        }
+
+        const empleadoId = row.querySelector('.empleado-select')?.value;
+        if (!empleadoId) return;
+
+        // Obtener el salario devengado del empleado
+        const salarioDevengado = parseFloat(row.querySelector('.salario-devengado')?.value) || 0;
+
+        // Calcular bonificaciones para este empleado
+        let totalBonificaciones = 0;
+        document.querySelectorAll('.bonificacion-row').forEach(bonifRow => {
+            if (bonifRow.querySelector('[name$="DELETE"]')?.checked) return;
+            const bonifEmpleado = bonifRow.querySelector('[name$="-empleado"]')?.value;
+            if (bonifEmpleado == empleadoId) {
+                const monto = parseFloat(bonifRow.querySelector('[name$="-monto"]')?.value) || 0;
+                totalBonificaciones += monto;
+            }
+        });
+
+        // Calcular horas extra para este empleado
+        let totalHorasExtra = 0;
+        document.querySelectorAll('.horaextra-row').forEach(heRow => {
+            if (heRow.querySelector('[name$="DELETE"]')?.checked) return;
+            const heEmpleado = heRow.querySelector('[name$="-empleado"]')?.value;
+            if (heEmpleado == empleadoId) {
+                const monto = parseFloat(heRow.querySelector('[name$="-monto"]')?.value) || 0;
+                totalHorasExtra += monto;
+            }
+        });
+
+        // Calcular deducciones para este empleado
+        let totalDeducciones = 0;
+        document.querySelectorAll('.deduccion-row').forEach(dedRow => {
+            if (dedRow.querySelector('[name$="DELETE"]')?.checked) return;
+            const dedEmpleado = dedRow.querySelector('[name$="-empleado"]')?.value;
+            if (dedEmpleado == empleadoId) {
+                const monto = parseFloat(dedRow.querySelector('[name$="-monto"]')?.value) || 0;
+                totalDeducciones += monto;
+            }
+        });
+
+        // Calcular total del empleado
+        const totalEmpleado = salarioDevengado + totalBonificaciones + totalHorasExtra - totalDeducciones;
+
+        // Actualizar el total del empleado en su fila
+        const totalElement = row.querySelector('.total-empleado');
+        if (totalElement) {
+            totalElement.textContent = '$' + totalEmpleado.toFixed(2);
+        }
+
+        // Sumar al total general
+        totalGeneral += totalEmpleado;
+    });
+
+    // Actualizar el total general de la planilla
+    const totalPlanillaElement = document.getElementById('total-planilla');
+    if (totalPlanillaElement) {
+        totalPlanillaElement.textContent = '$' + totalGeneral.toFixed(2);
+    }
+}
+
+// Agregar observadores a todos los campos que afectan el total
+function agregarObservadoresCampos() {
+    // Observar cambios en salarios devengados
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('salario-devengado')) {
+            calcularTotalPlanillaCompleto();
+        }
+    });
+
+    // Observar cambios en bonificaciones (empleado y monto)
+    document.addEventListener('change', function(e) {
+        if (e.target.name && e.target.name.includes('bonificaciones-')) {
+            if (e.target.name.includes('-empleado') || e.target.name.includes('-monto')) {
+                calcularTotalPlanillaCompleto();
+            }
+        }
+    });
+
+    document.addEventListener('input', function(e) {
+        if (e.target.name && e.target.name.includes('bonificaciones-') && e.target.name.includes('-monto')) {
+            calcularTotalPlanillaCompleto();
+        }
+    });
+
+    // Observar cambios en deducciones (empleado y monto)
+    document.addEventListener('change', function(e) {
+        if (e.target.name && e.target.name.includes('deducciones-')) {
+            if (e.target.name.includes('-empleado') || e.target.name.includes('-monto')) {
+                calcularTotalPlanillaCompleto();
+            }
+        }
+    });
+
+    document.addEventListener('input', function(e) {
+        if (e.target.name && e.target.name.includes('deducciones-') && e.target.name.includes('-monto')) {
+            calcularTotalPlanillaCompleto();
+        }
+    });
+
+    // Observar cambios en horas extra (empleado y monto)
+    document.addEventListener('change', function(e) {
+        if (e.target.name && e.target.name.includes('horas_extra-')) {
+            if (e.target.name.includes('-empleado') || e.target.name.includes('-monto')) {
+                calcularTotalPlanillaCompleto();
+            }
+        }
+    });
+
+    document.addEventListener('input', function(e) {
+        if (e.target.name && e.target.name.includes('horas_extra-') && e.target.name.includes('-monto')) {
+            calcularTotalPlanillaCompleto();
+        }
+    });
+
+    // Observar cambios en selección de empleados
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('empleado-select')) {
+            cargarSalarioEmpleado(e.target);
+            calcularTotalPlanillaCompleto();
+        }
+    });
+}
+
+// Inicializar observadores cuando el documento esté listo
+agregarObservadoresCampos();
+</script>
+
+<!-- jQuery (requerido para Select2) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/es.js"></script>
+
+<script>
+// Inicializar Select2 en el select de proyecto
+$(document).ready(function() {
+    const proyectoSelect = $('[name="proyecto"]');
+
+    // Inicializar Select2
+    proyectoSelect.select2({
+        theme: 'bootstrap-5',
+        language: 'es',
+        placeholder: 'Seleccione un proyecto',
+        allowClear: true,
+        width: '100%'
+    });
+
+    // En modo edición, bloquear el proyecto
+    {% if object %}
+    proyectoSelect.prop('disabled', true);
+    proyectoSelect.trigger('change');
+
+    // Agregar nota visual de que está bloqueado
+    proyectoSelect.closest('.mb-3').append(
+        '<small class="text-muted d-block mt-1"><i class="bi bi-lock"></i> El proyecto no puede cambiarse en modo edición</small>'
+    );
+    {% endif %}
+});
+</script>
+{% endblock %}

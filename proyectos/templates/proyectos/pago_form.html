@@ -1,0 +1,142 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}
+    {% if pago %}Editar Pago{% else %}Registrar Pago{% endif %} - Sistema Constructora
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>
+            <i class="bi bi-cash-stack"></i>
+            {% if pago %}
+                Editar Pago
+            {% else %}
+                Registrar Pago del Cliente
+            {% endif %}
+        </h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% if proyecto_seleccionado %}{% url 'proyecto_detail' proyecto_seleccionado.id %}{% else %}{% url 'proyectos_list' %}{% endif %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Datos del Pago (Desembolso)</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="proyecto" class="form-label">Proyecto <span class="text-danger">*</span></label>
+                        <select name="proyecto" id="proyecto" class="form-select" required {% if pago %}disabled{% endif %}>
+                            <option value="">Seleccionar proyecto...</option>
+                            {% for proyecto in proyectos %}
+                                <option value="{{ proyecto.id }}"
+                                    {% if proyecto_seleccionado and proyecto.id == proyecto_seleccionado.id %}selected{% endif %}>
+                                    {{ proyecto.codigo }} - {{ proyecto.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if pago %}
+                            <input type="hidden" name="proyecto" value="{{ pago.proyecto.id }}">
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="monto" class="form-label">Monto del Pago <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" name="monto" id="monto" class="form-control"
+                                           step="0.01" min="0"
+                                           value="{% if pago %}{{ pago.monto }}{% endif %}"
+                                           placeholder="0.00" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fecha_pago" class="form-label">Fecha del Pago <span class="text-danger">*</span></label>
+                                <input type="date" name="fecha_pago" id="fecha_pago" class="form-control"
+                                       value="{% if pago %}{{ pago.fecha_pago|date:'Y-m-d' }}{% endif %}" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="concepto" class="form-label">Concepto</label>
+                        <input type="text" name="concepto" id="concepto" class="form-control"
+                               value="{% if pago %}{{ pago.concepto }}{% endif %}"
+                               placeholder="Ej: Desembolso inicial, Pago parcial avance 50%, etc.">
+                        <small class="text-muted">Opcional. Describe el motivo del pago.</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="forma_pago" class="form-label">Forma de Pago <span class="text-danger">*</span></label>
+                                <select name="forma_pago" id="forma_pago" class="form-select" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="efectivo" {% if pago and pago.forma_pago == 'efectivo' %}selected{% endif %}>Efectivo</option>
+                                    <option value="transferencia" {% if pago and pago.forma_pago == 'transferencia' %}selected{% endif %}>Transferencia</option>
+                                    <option value="cheque" {% if pago and pago.forma_pago == 'cheque' %}selected{% endif %}>Cheque</option>
+                                    <option value="deposito" {% if pago and pago.forma_pago == 'deposito' %}selected{% endif %}>Depósito</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="numero_referencia" class="form-label">Número de Referencia</label>
+                                <input type="text" name="numero_referencia" id="numero_referencia" class="form-control"
+                                       value="{% if pago %}{{ pago.numero_referencia }}{% endif %}"
+                                       placeholder="Ej: TRF-123456, CHQ-789">
+                                <small class="text-muted">Número de transferencia, cheque, etc.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if proyecto_seleccionado %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Información del Proyecto:</strong><br>
+                        Monto Total Proyecto: ${{ proyecto_seleccionado.calcular_monto_total_proyecto|floatformat:2 }}<br>
+                        Total Pagado: ${{ proyecto_seleccionado.calcular_total_pagado|floatformat:2 }}<br>
+                        Saldo Pendiente: ${{ proyecto_seleccionado.calcular_saldo_pendiente|floatformat:2 }}
+                    </div>
+                    {% endif %}
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% if proyecto_seleccionado %}{% url 'proyecto_detail' proyecto_seleccionado.id %}{% else %}{% url 'proyectos_list' %}{% endif %}"
+                           class="btn btn-secondary">
+                            <i class="bi bi-x"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check"></i>
+                            {% if pago %}Actualizar Pago{% else %}Registrar Pago{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-completar fecha de pago si está vacía
+    document.addEventListener('DOMContentLoaded', function() {
+        const fechaPago = document.getElementById('fecha_pago');
+        if (!fechaPago.value) {
+            const today = new Date().toISOString().split('T')[0];
+            fechaPago.value = today;
+        }
+    });
+</script>
+{% endblock %}

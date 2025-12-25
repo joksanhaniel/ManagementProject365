@@ -1,0 +1,156 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}Empleados - Sistema Constructora{% endblock %}
+
+{% block extra_css %}
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2><i class="bi bi-people"></i> Empleados</h2>
+        <p class="text-muted">Gestión de personal</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'empleado_create' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> Nuevo Empleado
+        </a>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Empleado</label>
+                <select name="empleado" class="form-select">
+                    <option value="">Todos los empleados</option>
+                    {% for emp in todos_empleados %}
+                        <option value="{{ emp.id }}" {% if filtro_empleado == emp.id|stringformat:"s" %}selected{% endif %}>
+                            {{ emp.codigo }} - {{ emp.nombre_completo }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Estado</label>
+                <select name="activo" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="1" {% if filtro_activo == '1' %}selected{% endif %}>Activo</option>
+                    <option value="0" {% if filtro_activo == '0' %}selected{% endif %}>Inactivo</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Cargo</label>
+                <select name="cargo" class="form-select">
+                    <option value="">Todos</option>
+                    {% for cargo in cargos_unicos %}
+                        <option value="{{ cargo }}" {% if filtro_cargo == cargo %}selected{% endif %}>
+                            {{ cargo }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Tipo Contrato</label>
+                <select name="tipo_contrato" class="form-select">
+                    <option value="">Todos</option>
+                    {% for tipo_val, tipo_label in tipos_contrato %}
+                        <option value="{{ tipo_val }}" {% if filtro_tipo_contrato == tipo_val %}selected{% endif %}>
+                            {{ tipo_label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2" title="Filtrar">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+                <a href="{% url 'empleados_list' %}" class="btn btn-secondary" title="Limpiar">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre Completo</th>
+                        <th>Cargo</th>
+                        <th>Tipo Contrato</th>
+                        <th class="text-end">Salario Base</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for empleado in empleados %}
+                    <tr>
+                        <td><strong>{{ empleado.codigo }}</strong></td>
+                        <td>{{ empleado.nombre_completo }}</td>
+                        <td>{{ empleado.cargo }}</td>
+                        <td>
+                            <span class="badge bg-secondary">{{ empleado.get_tipo_contrato_display }}</span>
+                        </td>
+                        <td class="text-end">${{ empleado.salario_base|floatformat:2 }}</td>
+                        <td>
+                            {% if empleado.activo %}
+                                <span class="badge bg-success">Activo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-actions">
+                            <a href="{% url 'empleado_update' empleado.id %}" class="btn btn-sm btn-warning" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'empleado_delete' empleado.id %}" class="btn btn-sm btn-danger" title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            No hay empleados registrados
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- jQuery (requerido para Select2) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/es.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Inicializar Select2 en select de empleado
+    $('select[name="empleado"]').select2({
+        theme: 'bootstrap-5',
+        language: 'es',
+        placeholder: 'Todos los empleados',
+        allowClear: true,
+        width: '100%'
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}Asignaciones de Empleados - Sistema Constructora{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2><i class="bi bi-person-badge"></i> Asignaciones de Empleados</h2>
+        <p class="text-muted">Gestión de empleados asignados a proyectos</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'asignacion_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Nueva Asignación
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Proyecto</th>
+                        <th>Empleado</th>
+                        <th>Cargo</th>
+                        <th>Fecha Asignación</th>
+                        <th>Fecha Finalización</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for asignacion in asignaciones %}
+                    <tr>
+                        <td>
+                            <strong>{{ asignacion.proyecto.codigo }}</strong><br>
+                            <small class="text-muted">{{ asignacion.proyecto.nombre }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ asignacion.empleado.codigo }}</strong><br>
+                            <small class="text-muted">{{ asignacion.empleado.nombre_completo }}</small>
+                        </td>
+                        <td>{{ asignacion.empleado.cargo }}</td>
+                        <td>{{ asignacion.fecha_asignacion|date:"d/m/Y" }}</td>
+                        <td>
+                            {% if asignacion.fecha_finalizacion %}
+                                {{ asignacion.fecha_finalizacion|date:"d/m/Y" }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if asignacion.activo %}
+                                <span class="badge bg-success">Activo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-actions">
+                            <a href="{% url 'asignacion_update' asignacion.id %}" class="btn btn-sm btn-warning" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'asignacion_delete' asignacion.id %}" class="btn btn-sm btn-danger" title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            No hay asignaciones registradas
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
