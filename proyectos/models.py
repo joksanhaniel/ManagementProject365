@@ -4,29 +4,88 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
 
 
-class Cliente(models.Model):
-    codigo = models.CharField(max_length=20, unique=True, verbose_name='Código')
-    nombre = models.CharField(max_length=200, verbose_name='Nombre o Razón Social')
+class EmpresaManager(models.Manager):
+    """
+    Manager personalizado que filtra automáticamente por empresa.
+    Solo se usa cuando hay una empresa en el contexto (request).
+    """
+    def __init__(self, *args, **kwargs):
+        self.empresa_id = None
+        super().__init__(*args, **kwargs)
+
+    def for_empresa(self, empresa):
+        """Filtra los objetos por empresa"""
+        if empresa:
+            return self.filter(empresa=empresa)
+        return self.none()
+
+    def get_queryset(self):
+        """
+        Retorna el queryset base. El filtrado por empresa se hace
+        manualmente en las vistas usando for_empresa().
+        """
+        return super().get_queryset()
+
+
+class Empresa(models.Model):
+    """
+    Modelo para gestión de múltiples empresas en el sistema.
+    Cada empresa tiene sus propios proyectos, clientes, empleados, etc.
+    """
+    codigo = models.CharField(max_length=20, unique=True, verbose_name='Código',
+                              help_text='Código único para identificar la empresa en URLs')
+    nombre = models.CharField(max_length=200, verbose_name='Nombre Comercial')
+    razon_social = models.CharField(max_length=200, verbose_name='Razón Social')
     rtn = models.CharField(max_length=14, unique=True, verbose_name='RTN')
+    telefono = models.CharField(max_length=15, blank=True, null=True, verbose_name='Teléfono')
+    email = models.EmailField(blank=True, null=True, verbose_name='Correo Electrónico')
+    direccion = models.TextField(blank=True, null=True, verbose_name='Dirección')
+    logo = models.ImageField(upload_to='empresas/logos/', blank=True, null=True, verbose_name='Logo')
+    activa = models.BooleanField(default=True, verbose_name='Empresa Activa')
+    fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Creación')
+    fecha_modificacion = models.DateTimeField(auto_now=True, verbose_name='Última Modificación')
+
+    class Meta:
+        verbose_name = 'Empresa'
+        verbose_name_plural = 'Empresas'
+        ordering = ['nombre']
+
+    def __str__(self):
+        return f"{self.codigo} - {self.nombre}"
+
+    def get_url_prefix(self):
+        """Retorna el prefijo de URL para esta empresa"""
+        return self.codigo.lower()
+
+
+class Cliente(models.Model):
+    empresa = models.ForeignKey('Empresa', on_delete=models.PROTECT, related_name='clientes', verbose_name='Empresa', null=True, blank=True)
+    codigo = models.CharField(max_length=20, verbose_name='Código')
+    nombre = models.CharField(max_length=200, verbose_name='Nombre o Razón Social')
+    rtn = models.CharField(max_length=14, verbose_name='RTN')
     telefono = models.CharField(max_length=15, blank=True, null=True, verbose_name='Teléfono')
     email = models.EmailField(blank=True, null=True, verbose_name='Correo Electrónico')
     direccion = models.TextField(blank=True, null=True, verbose_name='Dirección')
     contacto = models.CharField(max_length=200, blank=True, null=True, verbose_name='Persona de Contacto')
     activo = models.BooleanField(default=True)
 
+    objects = EmpresaManager()
+
     class Meta:
         verbose_name = 'Cliente'
         verbose_name_plural = 'Clientes'
         ordering = ['nombre']
+        unique_together = [['empresa', 'codigo'], ['empresa', 'rtn']]
 
     def __str__(self):
         return f"{self.codigo} - {self.nombre}"
 
 
 class Proveedor(models.Model):
-    codigo = models.CharField(max_length=20, unique=True, verbose_name='Código')
+    empresa = models.ForeignKey('Empresa', on_delete=models.PROTECT, related_name='proveedores', verbose_name='Empresa', null=True, blank=True)
+    codigo = models.CharField(max_length=20, verbose_name='Código')
     nombre = models.CharField(max_length=200, verbose_name='Nombre o Razón Social')
-    rtn = models.CharField(max_length=14, unique=True, verbose_name='RTN')
+    rtn = models.CharField(max_length=14, verbose_name='RTN')
     telefono = models.CharField(max_length=15, blank=True, null=True, verbose_name='Teléfono')
     email = models.EmailField(blank=True, null=True, verbose_name='Correo Electrónico')
     direccion = models.TextField(blank=True, null=True, verbose_name='Dirección')
@@ -35,10 +94,13 @@ class Proveedor(models.Model):
                                       help_text='Ej: Materiales, Equipos, Servicios, etc.')
     activo = models.BooleanField(default=True)
 
+    objects = EmpresaManager()
+
     class Meta:
         verbose_name = 'Proveedor'
         verbose_name_plural = 'Proveedores'
         ordering = ['nombre']
+        unique_together = [['empresa', 'codigo'], ['empresa', 'rtn']]
 
     def __str__(self):
         return f"{self.codigo} - {self.nombre}"
@@ -51,10 +113,11 @@ class Empleado(models.Model):
         ('subcontratista', 'Subcontratista'),
     ]
 
-    codigo = models.CharField(max_length=20, unique=True, verbose_name='Código')
+    empresa = models.ForeignKey('Empresa', on_delete=models.PROTECT, related_name='empleados', verbose_name='Empresa', null=True, blank=True)
+    codigo = models.CharField(max_length=20, verbose_name='Código')
     nombres = models.CharField(max_length=100)
     apellidos = models.CharField(max_length=100)
-    dni = models.CharField(max_length=20, unique=True, verbose_name='DNI')
+    dni = models.CharField(max_length=20, verbose_name='DNI')
     rtn = models.CharField(max_length=20, blank=True, null=True, verbose_name='RTN')
     telefono = models.CharField(max_length=15, blank=True, null=True, verbose_name='Teléfono')
     direccion = models.TextField(blank=True, null=True, verbose_name='Dirección')
@@ -64,10 +127,13 @@ class Empleado(models.Model):
     fecha_ingreso = models.DateField()
     activo = models.BooleanField(default=True)
 
+    objects = EmpresaManager()
+
     class Meta:
         verbose_name = 'Empleado'
         verbose_name_plural = 'Empleados'
         ordering = ['apellidos', 'nombres']
+        unique_together = [['empresa', 'codigo'], ['empresa', 'dni']]
 
     def __str__(self):
         return f"{self.codigo} - {self.nombres} {self.apellidos}"
@@ -86,7 +152,8 @@ class Proyecto(models.Model):
         ('cancelado', 'Cancelado'),
     ]
 
-    codigo = models.CharField(max_length=20, unique=True, verbose_name='Código')
+    empresa = models.ForeignKey('Empresa', on_delete=models.PROTECT, related_name='proyectos', verbose_name='Empresa', null=True, blank=True)
+    codigo = models.CharField(max_length=20, verbose_name='Código')
     nombre = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True, null=True, verbose_name='Descripción')
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='proyectos', verbose_name='Cliente', blank=True, null=True)
@@ -98,10 +165,13 @@ class Proyecto(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='planificacion')
     porcentaje_avance = models.DecimalField(max_digits=5, decimal_places=2, default=0, validators=[MinValueValidator(Decimal('0'))], verbose_name='% Avance')
 
+    objects = EmpresaManager()
+
     class Meta:
         verbose_name = 'Proyecto'
         verbose_name_plural = 'Proyectos'
         ordering = ['-fecha_inicio']
+        unique_together = [['empresa', 'codigo']]
 
     def __str__(self):
         if self.cliente:
@@ -366,7 +436,7 @@ class OrdenCambio(models.Model):
 
 class Usuario(AbstractUser):
     """
-    Usuario personalizado con roles y permisos específicos para el sistema de constructora.
+    Usuario personalizado con roles y permisos específicos para el sistema MultiProject Pro.
 
     Roles disponibles:
     - Gerente: Acceso total a la aplicación web (sin acceso a Django Admin)
@@ -386,6 +456,15 @@ class Usuario(AbstractUser):
         ('usuario', 'Usuario'),
     ]
 
+    empresa = models.ForeignKey(
+        'Empresa',
+        on_delete=models.PROTECT,
+        related_name='usuarios',
+        null=True,
+        blank=True,
+        verbose_name='Empresa',
+        help_text='Empresa a la que pertenece el usuario. Superusuarios pueden no tener empresa asignada.'
+    )
     rol = models.CharField(
         max_length=20,
         choices=ROL_CHOICES,

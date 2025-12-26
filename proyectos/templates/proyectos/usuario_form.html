@@ -46,6 +46,31 @@
         </div>
     </div>
 
+    <div class="row">
+        <div class="col-md-12 mb-3">
+            <label class="form-label">Empresa</label>
+            {% if es_gerente %}
+                <!-- Gerentes no pueden cambiar la empresa -->
+                {{ form.empresa }}
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const empresaField = document.querySelector('select[name="empresa"]');
+                        if (empresaField) {
+                            empresaField.disabled = true;
+                            empresaField.style.backgroundColor = '#e9ecef';
+                        }
+                    });
+                </script>
+                <small class="text-muted">Como Gerente, solo puedes crear usuarios para tu empresa</small>
+            {% else %}
+                <!-- Superusuarios pueden seleccionar cualquier empresa -->
+                {{ form.empresa }}
+                <small class="text-muted">{{ form.empresa.help_text }}</small>
+            {% endif %}
+            {% if form.empresa.errors %}<div class="text-danger">{{ form.empresa.errors }}</div>{% endif %}
+        </div>
+    </div>
+
     {% if not object %}
     <!-- Solo mostrar contraseñas al crear usuario nuevo -->
     <div class="row">
@@ -80,7 +105,7 @@
     {% endif %}
 
     <div class="d-flex justify-content-between mt-4">
-        <a href="{% url 'usuarios_list' %}" class="btn btn-secondary">
+        <a href="{% url 'usuarios_list' empresa_codigo %}" class="btn btn-secondary">
             <i class="bi bi-x-circle"></i> Cancelar
         </a>
         <button type="submit" class="btn btn-primary">

@@ -1,5 +1,5 @@
 """
-URL configuration for constructora_system project.
+URL configuration for mpp365_system project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.0/topics/http/urls/
@@ -16,9 +16,21 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.contrib.auth.views import LogoutView
+from proyectos import views as proyectos_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('proyectos.urls')),
+
+    # Login sin prefijo de empresa
+    path('', proyectos_views.CustomLoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(next_page='/'), name='logout'),
+
+    # Selección de empresa (solo para superusuarios)
+    path('seleccionar-empresa/', proyectos_views.seleccionar_empresa, name='seleccionar_empresa'),
+
+    # URLs con prefijo de empresa
+    path('<str:empresa_codigo>/', include('proyectos.urls')),
+
     path('api-auth/', include('rest_framework.urls')),
 ]

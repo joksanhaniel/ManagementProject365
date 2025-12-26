@@ -1,6 +1,6 @@
 {% extends 'proyectos/base.html' %}
 
-{% block title %}{% if object %}Editar Cliente{% else %}Nuevo Cliente{% endif %} - Sistema Constructora{% endblock %}
+{% block title %}{% if object %}Editar Cliente{% else %}Nuevo Cliente{% endif %} - MultiProject Pro{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
@@ -95,7 +95,7 @@
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-save"></i> Guardar
                     </button>
-                    <a href="{% url 'clientes_list' %}" class="btn btn-secondary">
+                    <a href="{% url 'clientes_list' empresa_codigo %}" class="btn btn-secondary">
                         <i class="bi bi-x-circle"></i> Cancelar
                     </a>
                 </div>

@@ -1,6 +1,6 @@
 {% extends 'proyectos/base.html' %}
 
-{% block title %}Empleados - Sistema Constructora{% endblock %}
+{% block title %}Empleados - MultiProject Pro{% endblock %}
 
 {% block extra_css %}
 <!-- Select2 CSS -->
@@ -15,7 +15,7 @@
         <p class="text-muted">Gestión de personal</p>
     </div>
     <div class="col-md-6 text-end">
-        <a href="{% url 'empleado_create' %}" class="btn btn-primary">
+        <a href="{% url 'empleado_create' empresa_codigo %}" class="btn btn-primary">
             <i class="bi bi-person-plus"></i> Nuevo Empleado
         </a>
     </div>
@@ -70,7 +70,7 @@
                 <button type="submit" class="btn btn-primary me-2" title="Filtrar">
                     <i class="bi bi-search"></i> Buscar
                 </button>
-                <a href="{% url 'empleados_list' %}" class="btn btn-secondary" title="Limpiar">
+                <a href="{% url 'empleados_list' empresa_codigo %}" class="btn btn-secondary" title="Limpiar">
                     <i class="bi bi-x-circle"></i>
                 </a>
             </div>
@@ -111,10 +111,10 @@
                             {% endif %}
                         </td>
                         <td class="table-actions">
-                            <a href="{% url 'empleado_update' empleado.id %}" class="btn btn-sm btn-warning" title="Editar">
+                            <a href="{% url 'empleado_update' empresa_codigo empleado.id %}" class="btn btn-sm btn-warning" title="Editar">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <a href="{% url 'empleado_delete' empleado.id %}" class="btn btn-sm btn-danger" title="Eliminar">
+                            <a href="{% url 'empleado_delete' empresa_codigo empleado.id %}" class="btn btn-sm btn-danger" title="Eliminar">
                                 <i class="bi bi-trash"></i>
                             </a>
                         </td>

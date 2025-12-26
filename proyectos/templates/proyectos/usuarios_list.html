@@ -1,6 +1,6 @@
 {% extends 'proyectos/base.html' %}
 
-{% block title %}Usuarios - Sistema Constructora{% endblock %}
+{% block title %}Usuarios - MultiProject Pro{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
@@ -9,7 +9,7 @@
         <p class="text-muted">Gestión de usuarios y roles</p>
     </div>
     <div class="col-md-6 text-end">
-        <a href="{% url 'usuario_create' %}" class="btn btn-primary">
+        <a href="{% url 'usuario_create' empresa_codigo %}" class="btn btn-primary">
             <i class="bi bi-person-plus-fill"></i> Nuevo Usuario
         </a>
     </div>
@@ -42,7 +42,7 @@
                 <button type="submit" class="btn btn-primary me-2">
                     <i class="bi bi-funnel"></i> Filtrar
                 </button>
-                <a href="{% url 'usuarios_list' %}" class="btn btn-secondary">
+                <a href="{% url 'usuarios_list' empresa_codigo %}" class="btn btn-secondary">
                     <i class="bi bi-x-circle"></i> Limpiar
                 </a>
             </div>
@@ -59,7 +59,7 @@
                         <th>Usuario</th>
                         <th>Nombre Completo</th>
                         <th>Email</th>
-                        <th>Teléfono</th>
+                        <th>Empresa</th>
                         <th>Rol</th>
                         <th>Estado</th>
                         <th>Último Acceso</th>
@@ -72,16 +72,25 @@
                         <td><strong>{{ usuario.username }}</strong></td>
                         <td>{{ usuario.first_name }} {{ usuario.last_name }}</td>
                         <td>{{ usuario.email|default:"-" }}</td>
-                        <td>{{ usuario.telefono|default:"-" }}</td>
                         <td>
-                            {% if usuario.rol == 'administrador' %}
-                                <span class="badge bg-danger">{{ usuario.get_rol_display }}</span>
-                            {% elif usuario.rol == 'gerente_proyecto' %}
+                            {% if usuario.empresa %}
+                                <span class="badge bg-info">{{ usuario.empresa.codigo }}</span>
+                                <small class="text-muted d-block">{{ usuario.empresa.nombre }}</small>
+                            {% else %}
+                                <span class="badge bg-secondary">Sin empresa</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if usuario.is_superuser %}
+                                <span class="badge bg-danger"><i class="bi bi-star-fill"></i> Superusuario</span>
+                            {% elif usuario.rol == 'gerente' %}
                                 <span class="badge bg-primary">{{ usuario.get_rol_display }}</span>
+                            {% elif usuario.rol == 'supervisor' %}
+                                <span class="badge bg-warning">{{ usuario.get_rol_display }}</span>
                             {% elif usuario.rol == 'contador' %}
                                 <span class="badge bg-success">{{ usuario.get_rol_display }}</span>
-                            {% elif usuario.rol == 'supervisor_obra' %}
-                                <span class="badge bg-warning">{{ usuario.get_rol_display }}</span>
+                            {% elif usuario.rol == 'auxiliar' %}
+                                <span class="badge bg-info">{{ usuario.get_rol_display }}</span>
                             {% else %}
                                 <span class="badge bg-secondary">{{ usuario.get_rol_display }}</span>
                             {% endif %}
@@ -101,10 +110,10 @@
                             {% endif %}
                         </td>
                         <td class="table-actions">
-                            <a href="{% url 'usuario_update' usuario.id %}" class="btn btn-sm btn-warning" title="Editar">
+                            <a href="{% url 'usuario_update' empresa_codigo usuario.id %}" class="btn btn-sm btn-warning" title="Editar">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <a href="{% url 'usuario_delete' usuario.id %}" class="btn btn-sm btn-danger" title="Eliminar">
+                            <a href="{% url 'usuario_delete' empresa_codigo usuario.id %}" class="btn btn-sm btn-danger" title="Eliminar">
                                 <i class="bi bi-trash"></i>
                             </a>
                         </td>
@@ -125,52 +134,83 @@
 <!-- Información sobre roles -->
 <div class="card mt-3">
     <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Descripción de Roles</h5>
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Descripción de Roles y Módulos de Acceso</h5>
     </div>
     <div class="card-body">
         <div class="row">
+            <!-- Columna Izquierda -->
             <div class="col-md-6">
-                <h6><span class="badge bg-danger">Administrador</span></h6>
+                {% if user.is_superuser %}
+                <h6><span class="badge bg-danger"><i class="bi bi-star-fill"></i> Superusuario</span></h6>
                 <ul class="small">
                     <li>Acceso total al sistema</li>
-                    <li>Gestión de usuarios</li>
-                    <li>Configuración del sistema</li>
+                    <li>Gestión de empresas (multiempresa)</li>
+                    <li>Gestión de usuarios de todas las empresas</li>
+                    <li>Acceso al panel de administración Django</li>
+                    <li>Puede cambiar entre empresas</li>
                 </ul>
+                <p class="small mb-3"><strong>Módulos:</strong> Dashboard, Clientes, Proveedores, Empleados, Proyectos, Planillas, Gastos, Usuarios, Empresas, Administración, API REST</p>
+                {% endif %}
 
-                <h6><span class="badge bg-primary">Gerente de Proyecto</span></h6>
+                <h6><span class="badge bg-primary">Gerente</span></h6>
                 <ul class="small">
+                    <li>Acceso total a la aplicación web (sin Django Admin)</li>
+                    <li>Gestión de usuarios de su empresa</li>
                     <li>Crear/editar/eliminar proyectos</li>
-                    <li>Gestionar empleados y asignaciones</li>
-                    <li>Gestionar planillas y gastos</li>
+                    <li>Gestionar empleados, asignaciones, planillas y gastos</li>
                     <li>Acceso completo a información financiera</li>
                 </ul>
+                <p class="small mb-3"><strong>Módulos:</strong> Dashboard, Clientes, Proveedores, Empleados, Proyectos, Planillas, Gastos, Usuarios</p>
 
+                <h6><span class="badge bg-warning">Supervisor</span></h6>
+                <ul class="small">
+                    <li>Gestión de proyectos</li>
+                    <li>Gestionar empleados y asignaciones</li>
+                    <li>Gestionar planillas y gastos</li>
+                    <li>Acceso a información financiera</li>
+                    <li>Registro de asistencias</li>
+                </ul>
+                <p class="small mb-3"><strong>Módulos:</strong> Dashboard, Clientes, Proveedores, Empleados, Proyectos, Planillas, Gastos</p>
+            </div>
+
+            <!-- Columna Derecha -->
+            <div class="col-md-6">
                 <h6><span class="badge bg-success">Contador</span></h6>
                 <ul class="small">
                     <li>Acceso a información financiera</li>
                     <li>Gestionar planillas de pago</li>
-                    <li>Gestionar gastos</li>
+                    <li>Gestionar gastos del proyecto</li>
                     <li>Generar reportes financieros</li>
+                    <li>Consultar proyectos (solo lectura)</li>
                 </ul>
-            </div>
-            <div class="col-md-6">
-                <h6><span class="badge bg-warning">Supervisor de Obra</span></h6>
+                <p class="small mb-3"><strong>Módulos:</strong> Dashboard, Proyectos (lectura), Planillas, Gastos</p>
+
+                <h6><span class="badge bg-info">Auxiliar</span></h6>
                 <ul class="small">
-                    <li>Gestionar asignaciones de empleados</li>
+                    <li>Gestión de asignaciones de empleados</li>
                     <li>Consultar información de proyectos</li>
                     <li>Registro de asistencias</li>
-                    <li>Sin acceso a información financiera completa</li>
+                    <li>Sin acceso a información financiera</li>
                 </ul>
+                <p class="small mb-3"><strong>Módulos:</strong> Dashboard, Empleados, Proyectos (lectura)</p>
 
-                <h6><span class="badge bg-secondary">Consultor</span></h6>
+                <h6><span class="badge bg-secondary">Usuario</span></h6>
                 <ul class="small">
                     <li>Solo lectura de proyectos</li>
-                    <li>Consultar reportes</li>
+                    <li>Consultar reportes básicos</li>
                     <li>Sin permisos de escritura</li>
-                    <li>Sin acceso a información financiera sensible</li>
+                    <li>Sin acceso a información financiera</li>
                 </ul>
+                <p class="small mb-3"><strong>Módulos:</strong> Dashboard, Proyectos (solo lectura)</p>
             </div>
         </div>
+
+        {% if not user.is_superuser %}
+        <div class="alert alert-info mt-3 mb-0">
+            <i class="bi bi-info-circle"></i>
+            <strong>Nota:</strong> Solo los superusuarios pueden acceder a los módulos de Administración, API REST y Gestión de Empresas.
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

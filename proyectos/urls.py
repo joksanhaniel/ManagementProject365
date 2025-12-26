@@ -15,12 +15,9 @@ router.register(r'gastos', views.GastoViewSet, basename='gasto')
 router.register(r'pagos', views.PagoViewSet, basename='pago')
 
 urlpatterns = [
-    # Auth
-    path('', views.CustomLoginView.as_view(), name='login'),
-    path('logout/', LogoutView.as_view(next_page='/'), name='logout'),
-
     # Vistas HTML - Dashboard
-    path('dashboard/', views.dashboard, name='dashboard'),
+    path('', views.dashboard, name='dashboard'),
+    path('dashboard/', views.dashboard, name='dashboard_alt'),
 
     # Clientes - CRUD
     path('clientes/', views.clientes_list, name='clientes_list'),
@@ -79,6 +76,12 @@ urlpatterns = [
     path('usuarios/nuevo/', views.usuario_create, name='usuario_create'),
     path('usuarios/<int:pk>/editar/', views.usuario_update, name='usuario_update'),
     path('usuarios/<int:pk>/eliminar/', views.usuario_delete, name='usuario_delete'),
+
+    # Empresas - CRUD (Solo Superusuarios)
+    path('empresas/', views.empresas_list, name='empresas_list'),
+    path('empresas/nueva/', views.empresa_create, name='empresa_create'),
+    path('empresas/<int:pk>/editar/', views.empresa_update, name='empresa_update'),
+    path('empresas/<int:pk>/eliminar/', views.empresa_delete, name='empresa_delete'),
 
     # Órdenes de Cambio - CRUD
     path('ordenes-cambio/nueva/', views.orden_cambio_create, name='orden_cambio_create'),

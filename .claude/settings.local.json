@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python manage.py shell:*)",
+      "Bash(python test_empleado.py:*)",
+      "Bash(python manage.py makemigrations:*)",
+      "Bash(python manage.py migrate:*)",
+      "Bash(python manage.py dbshell:*)",
+      "Bash(python:*)",
+      "Bash(del c:LENCADEVAZERHOMEproyectosmigrations0006_usuario.py)",
+      "Bash(rm:*)",
+      "Bash(timeout:*)",
+      "Bash(del:*)",
+      "Bash(grep:*)",
+      "Bash(dir:*)",
+      "Bash(sqlcmd:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}

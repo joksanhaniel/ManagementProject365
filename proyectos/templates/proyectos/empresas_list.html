@@ -1,0 +1,85 @@
+{% extends 'proyectos/base.html' %}
+{% load static %}
+
+{% block title %}Empresas{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-8">
+        <h2><i class="bi bi-building"></i> Gestión de Empresas</h2>
+        <p class="text-muted">Administra las empresas del sistema multiempresa</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'empresa_create' empresa_codigo %}" class="btn btn-primary">
+            <i class="bi bi-plus"></i> Nueva Empresa
+        </a>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Razón Social</th>
+                        <th>RTN</th>
+                        <th>Teléfono</th>
+                        <th>Email</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for empresa in empresas %}
+                    <tr>
+                        <td><strong>{{ empresa.codigo }}</strong></td>
+                        <td>{{ empresa.nombre }}</td>
+                        <td>{{ empresa.razon_social }}</td>
+                        <td>{{ empresa.rtn }}</td>
+                        <td>{{ empresa.telefono|default:"-" }}</td>
+                        <td>{{ empresa.email|default:"-" }}</td>
+                        <td>
+                            {% if empresa.activa %}
+                                <span class="badge bg-success">Activa</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactiva</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-actions">
+                            <a href="{% url 'empresa_update' empresa_codigo empresa.id %}" class="btn btn-sm btn-warning" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'empresa_delete' empresa_codigo empresa.id %}" class="btn btn-sm btn-danger" title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">No hay empresas registradas</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info mt-3">
+    <i class="bi bi-info-circle"></i>
+    <strong>Nota:</strong> Cada empresa puede tener sus propios clientes, proveedores, empleados y proyectos.
+    Los usuarios deben ser asignados a una empresa específica para poder acceder a sus datos.
+</div>
+{% endblock %}

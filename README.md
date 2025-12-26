@@ -1,10 +1,10 @@
-# Sistema de Gestión de Constructora
+# MultiProject Pro
 
-Sistema completo de gestión para empresas constructoras desarrollado en Django 5.0 con SQL Server.
+Sistema completo de gestión multiempresa para proyectos y nómina desarrollado en Django 5.0 con SQL Server.
 
 ## 🏗️ Características
 
-- **Gestión de Proyectos**: Crear, editar y dar seguimiento a proyectos de construcción
+- **Gestión de Proyectos**: Crear, editar y dar seguimiento a proyectos
   - Tracking de pagos del cliente (desembolsos parciales)
   - Órdenes de cambio para trabajos adicionales
   - Cálculo automático de monto total del proyecto
@@ -69,7 +69,7 @@ copy .env.example .env
 5. **Configurar base de datos**
 - Crear base de datos en SQL Server:
 ```sql
-CREATE DATABASE ConstructoraDB;
+CREATE DATABASE MPP365DB;
 ```
 
 6. **Aplicar migraciones**
@@ -120,8 +120,8 @@ python -c "from django.core.management.utils import get_random_secret_key; print
 ## 📁 Estructura del Proyecto
 
 ```
-AZERHOME/
-├── constructora_system/     # Configuración principal
+MPP365/
+├── mpp365_system/     # Configuración principal
 │   ├── settings.py         # Configuraciones
 │   ├── urls.py            # URLs principales
 │   └── wsgi.py

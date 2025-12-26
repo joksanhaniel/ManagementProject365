@@ -9,7 +9,7 @@
         <p class="text-muted">Complete la información del empleado</p>
     </div>
     <div class="col-md-4 text-end">
-        <a href="{% url 'empleados_list' %}" class="btn btn-secondary">
+        <a href="{% url 'empleados_list' empresa_codigo %}" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Volver
         </a>
     </div>
@@ -84,7 +84,7 @@
                     <hr class="my-4">
 
                     <div class="d-flex justify-content-between">
-                        <a href="{% url 'empleados_list' %}" class="btn btn-secondary">
+                        <a href="{% url 'empleados_list' empresa_codigo %}" class="btn btn-secondary">
                             <i class="bi bi-x-circle"></i> Cancelar
                         </a>
                         <button type="submit" class="btn btn-primary btn-lg">

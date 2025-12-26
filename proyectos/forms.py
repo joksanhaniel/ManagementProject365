@@ -10,10 +10,10 @@ from .models import (
 class ClienteForm(forms.ModelForm):
     class Meta:
         model = Cliente
-        fields = '__all__'
+        exclude = ['empresa']  # Empresa se asigna automáticamente en la vista
         widgets = {
             'codigo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CLI001'}),
-            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Constructora ABC S.A.'}),
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Empresa ABC S.A.'}),
             'rtn': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '01019012345678'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '2234-5678'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'contacto@empresa.hn'}),
@@ -26,7 +26,7 @@ class ClienteForm(forms.ModelForm):
 class ProveedorForm(forms.ModelForm):
     class Meta:
         model = Proveedor
-        fields = '__all__'
+        exclude = ['empresa']  # Empresa se asigna automáticamente en la vista
         widgets = {
             'codigo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'PROV001'}),
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ferretería Central S.A.'}),
@@ -43,7 +43,7 @@ class ProveedorForm(forms.ModelForm):
 class EmpleadoForm(forms.ModelForm):
     class Meta:
         model = Empleado
-        fields = '__all__'
+        exclude = ['empresa']  # Empresa se asigna automáticamente en la vista
         widgets = {
             'codigo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'EMP001'}),
             'nombres': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Juan'}),
@@ -68,7 +68,7 @@ class EmpleadoForm(forms.ModelForm):
 class ProyectoForm(forms.ModelForm):
     class Meta:
         model = Proyecto
-        fields = '__all__'
+        exclude = ['empresa']  # Empresa se asigna automáticamente en la vista
         widgets = {
             'codigo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'PROY001'}),
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Casa Residencial'}),
@@ -291,14 +291,15 @@ class UsuarioCreationForm(UserCreationForm):
 
     class Meta:
         model = Usuario
-        fields = ('username', 'first_name', 'last_name', 'email', 'telefono', 'rol', 'is_active', 'password1', 'password2')
+        fields = ('username', 'first_name', 'last_name', 'email', 'telefono', 'rol', 'empresa', 'is_active', 'password1', 'password2')
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'usuario123'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Juan'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Pérez'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'usuario@constructora.com'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'usuario@empresa.com'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '9999-9999'}),
             'rol': forms.Select(attrs={'class': 'form-select'}),
+            'empresa': forms.Select(attrs={'class': 'form-select'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
@@ -307,6 +308,9 @@ class UsuarioCreationForm(UserCreationForm):
         self.fields['password1'].widget.attrs.update({'class': 'form-control'})
         self.fields['password2'].widget.attrs.update({'class': 'form-control'})
         self.fields['email'].required = True
+        # Solo requerir empresa para usuarios no-superusuarios
+        self.fields['empresa'].required = False
+        self.fields['empresa'].help_text = 'Dejar en blanco para superusuarios'
 
 
 class UsuarioUpdateForm(forms.ModelForm):
@@ -314,20 +318,24 @@ class UsuarioUpdateForm(forms.ModelForm):
 
     class Meta:
         model = Usuario
-        fields = ('username', 'first_name', 'last_name', 'email', 'telefono', 'rol', 'is_active')
+        fields = ('username', 'first_name', 'last_name', 'email', 'telefono', 'rol', 'empresa', 'is_active')
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'usuario123'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Juan'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Pérez'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'usuario@constructora.com'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'usuario@empresa.com'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '9999-9999'}),
             'rol': forms.Select(attrs={'class': 'form-select'}),
+            'empresa': forms.Select(attrs={'class': 'form-select'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['email'].required = True
+        # Solo requerir empresa para usuarios no-superusuarios
+        self.fields['empresa'].required = False
+        self.fields['empresa'].help_text = 'Dejar en blanco para superusuarios'
 
 
 # ====== FORMULARIOS DE PRÉSTAMOS, ANTICIPOS Y SALARIOS ======
@@ -356,3 +364,57 @@ class DeduccionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['empleado'].queryset = Empleado.objects.filter(activo=True).order_by('nombres', 'apellidos')
         self.fields['planilla'].queryset = Planilla.objects.all().order_by('-fecha_pago')
+
+
+# ====== FORMULARIO DE EMPRESAS ======
+
+class EmpresaForm(forms.ModelForm):
+    """Formulario para crear y editar empresas"""
+
+    class Meta:
+        from .models import Empresa
+        model = Empresa
+        fields = '__all__'
+        widgets = {
+            'codigo': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'EMPRESA1',
+                'pattern': '[A-Z0-9]+',
+                'title': 'Solo letras mayúsculas y números, sin espacios'
+            }),
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Empresa ABC'
+            }),
+            'razon_social': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Empresa ABC S.A. de C.V.'
+            }),
+            'rtn': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '08011234567890'
+            }),
+            'telefono': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '2234-5678'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'info@empresa.com'
+            }),
+            'direccion': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Dirección completa de la empresa'
+            }),
+            'activa': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+        }
+
+    def clean_codigo(self):
+        """Validar que el código esté en mayúsculas y sin espacios"""
+        codigo = self.cleaned_data.get('codigo')
+        if codigo:
+            codigo = codigo.upper().replace(' ', '')
+        return codigo

@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
     Cliente, Proveedor, Empleado, Proyecto, AsignacionEmpleado, Planilla,
-    DetallePlanilla, Gasto, Pago, Usuario, OrdenCambio, Deduccion
+    DetallePlanilla, Gasto, Pago, Usuario, OrdenCambio, Deduccion, Empresa
 )
 from .serializers import (
     ClienteSerializer, EmpleadoSerializer, ProyectoSerializer, ProyectoListSerializer,
@@ -26,6 +26,17 @@ from .decorators import rol_requerido, permiso_escritura_requerido, permiso_fina
 from django.contrib import messages
 
 
+# ====== HELPER FUNCTIONS ======
+
+def get_empresa_from_request(request):
+    """
+    Obtiene la empresa del request (agregada por el middleware).
+    Si el usuario es superusuario y no hay empresa en la URL, retorna None.
+    Si el usuario normal no tiene empresa, retorna None.
+    """
+    return getattr(request, 'empresa', None)
+
+
 # ====== VISTAS HTML (Templates) ======
 
 class CustomLoginView(LoginView):
@@ -33,11 +44,47 @@ class CustomLoginView(LoginView):
     redirect_authenticated_user = True
 
     def get_success_url(self):
-        return '/dashboard/'
+        # Si es superusuario, redirigir a selección de empresa
+        if self.request.user.is_superuser:
+            return '/seleccionar-empresa/'
+        # Si tiene empresa asignada, redirigir al dashboard de su empresa
+        elif self.request.user.empresa:
+            return f'/{self.request.user.empresa.get_url_prefix()}/dashboard/'
+        else:
+            # Usuario sin empresa asignada (no debería pasar)
+            return '/dashboard/'
+
 
 @login_required
-def dashboard(request):
-    proyectos = Proyecto.objects.select_related('cliente').all()
+def seleccionar_empresa(request):
+    """
+    Vista para que los superusuarios seleccionen con qué empresa trabajar.
+    Los usuarios normales son redirigidos automáticamente a su empresa.
+    """
+    if not request.user.is_superuser:
+        # Los usuarios normales van directo a su empresa
+        if request.user.empresa:
+            return redirect(f'/{request.user.empresa.get_url_prefix()}/dashboard/')
+        else:
+            messages.error(request, 'Usuario sin empresa asignada. Contacte al administrador.')
+            return redirect('login')
+
+    empresas = Empresa.objects.filter(activa=True).order_by('nombre')
+
+    return render(request, 'proyectos/seleccionar_empresa.html', {
+        'empresas': empresas,
+    })
+
+@login_required
+def dashboard(request, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
+
+    # Filtrar proyectos por empresa
+    if empresa:
+        proyectos = Proyecto.objects.filter(empresa=empresa).select_related('cliente')
+    else:
+        proyectos = Proyecto.objects.select_related('cliente').all()
+
     proyectos_data = []
 
     utilidad_total = 0
@@ -60,13 +107,21 @@ def dashboard(request):
         })
         utilidad_total += utilidad
 
-    # Calcular estadísticas
-    stats = {
-        'proyectos_activos': Proyecto.objects.filter(estado__in=['planificacion', 'en_progreso']).count(),
-        'empleados_activos': Empleado.objects.filter(activo=True).count(),
-        'gastos_pendientes': Gasto.objects.filter(pagado=False).aggregate(total=Sum('monto'))['total'] or 0,
-        'utilidad_total': utilidad_total,
-    }
+    # Calcular estadísticas filtradas por empresa
+    if empresa:
+        stats = {
+            'proyectos_activos': Proyecto.objects.filter(empresa=empresa, estado__in=['planificacion', 'en_progreso']).count(),
+            'empleados_activos': Empleado.objects.filter(empresa=empresa, activo=True).count(),
+            'gastos_pendientes': Gasto.objects.filter(proyecto__empresa=empresa, pagado=False).aggregate(total=Sum('monto'))['total'] or 0,
+            'utilidad_total': utilidad_total,
+        }
+    else:
+        stats = {
+            'proyectos_activos': Proyecto.objects.filter(estado__in=['planificacion', 'en_progreso']).count(),
+            'empleados_activos': Empleado.objects.filter(activo=True).count(),
+            'gastos_pendientes': Gasto.objects.filter(pagado=False).aggregate(total=Sum('monto'))['total'] or 0,
+            'utilidad_total': utilidad_total,
+        }
 
     return render(request, 'proyectos/dashboard.html', {
         'stats': stats,
@@ -75,8 +130,14 @@ def dashboard(request):
 
 
 @login_required
-def proyectos_list(request):
-    proyectos = Proyecto.objects.select_related('cliente').all()
+def proyectos_list(request, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
+
+    # Filtrar proyectos por empresa
+    if empresa:
+        proyectos = Proyecto.objects.filter(empresa=empresa).select_related('cliente')
+    else:
+        proyectos = Proyecto.objects.select_related('cliente').all()
 
     # Filtros
     proyecto_id = request.GET.get('proyecto')
@@ -105,10 +166,15 @@ def proyectos_list(request):
             'get_estado_display': proyecto.get_estado_display(),
         })
 
-    # Datos para los filtros
-    clientes = Cliente.objects.filter(activo=True).order_by('nombre')
+    # Datos para los filtros (filtrados por empresa)
+    if empresa:
+        clientes = Cliente.objects.filter(empresa=empresa, activo=True).order_by('nombre')
+        todos_proyectos = Proyecto.objects.filter(empresa=empresa).order_by('codigo')
+    else:
+        clientes = Cliente.objects.filter(activo=True).order_by('nombre')
+        todos_proyectos = Proyecto.objects.all().order_by('codigo')
+
     estados = Proyecto.ESTADO_CHOICES
-    todos_proyectos = Proyecto.objects.all().order_by('codigo')
 
     return render(request, 'proyectos/proyectos_list.html', {
         'proyectos': proyectos_data,
@@ -122,7 +188,7 @@ def proyectos_list(request):
 
 
 @login_required
-def proyecto_detail(request, pk):
+def proyecto_detail(request, pk, empresa_codigo=None):
     proyecto = get_object_or_404(Proyecto, pk=pk)
 
     # Cálculos de costos
@@ -167,8 +233,14 @@ def proyecto_detail(request, pk):
 
 
 @login_required
-def empleados_list(request):
-    empleados = Empleado.objects.all()
+def empleados_list(request, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
+
+    # Filtrar empleados por empresa
+    if empresa:
+        empleados = Empleado.objects.filter(empresa=empresa)
+    else:
+        empleados = Empleado.objects.all()
 
     # Filtros
     empleado_id = request.GET.get('empleado')
@@ -186,10 +258,14 @@ def empleados_list(request):
     if tipo_contrato:
         empleados = empleados.filter(tipo_contrato=tipo_contrato)
 
-    # Datos para filtros
+    # Datos para filtros (filtrados por empresa)
     tipos_contrato = Empleado.TIPO_CONTRATO_CHOICES
-    cargos_unicos = Empleado.objects.values_list('cargo', flat=True).distinct().order_by('cargo')
-    todos_empleados = Empleado.objects.all().order_by('apellidos', 'nombres')
+    if empresa:
+        cargos_unicos = Empleado.objects.filter(empresa=empresa).values_list('cargo', flat=True).distinct().order_by('cargo')
+        todos_empleados = Empleado.objects.filter(empresa=empresa).order_by('apellidos', 'nombres')
+    else:
+        cargos_unicos = Empleado.objects.values_list('cargo', flat=True).distinct().order_by('cargo')
+        todos_empleados = Empleado.objects.all().order_by('apellidos', 'nombres')
 
     return render(request, 'proyectos/empleados_list.html', {
         'empleados': empleados,
@@ -204,8 +280,14 @@ def empleados_list(request):
 
 
 @login_required
-def planillas_list(request):
-    planillas = Planilla.objects.select_related('proyecto').all()
+def planillas_list(request, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
+
+    # Filtrar planillas por empresa (a través de proyecto)
+    if empresa:
+        planillas = Planilla.objects.filter(proyecto__empresa=empresa).select_related('proyecto')
+    else:
+        planillas = Planilla.objects.select_related('proyecto').all()
 
     # Filtros
     proyecto_id = request.GET.get('proyecto')
@@ -225,8 +307,12 @@ def planillas_list(request):
     if fecha_hasta:
         planillas = planillas.filter(fecha_pago__lte=fecha_hasta)
 
-    # Datos para filtros
-    proyectos = Proyecto.objects.filter(estado__in=['planificacion', 'en_progreso']).order_by('nombre')
+    # Datos para filtros (filtrados por empresa)
+    if empresa:
+        proyectos = Proyecto.objects.filter(empresa=empresa, estado__in=['planificacion', 'en_progreso']).order_by('nombre')
+    else:
+        proyectos = Proyecto.objects.filter(estado__in=['planificacion', 'en_progreso']).order_by('nombre')
+
     tipos_planilla = Planilla.TIPO_PLANILLA_CHOICES
 
     return render(request, 'proyectos/planillas_list.html', {
@@ -242,8 +328,14 @@ def planillas_list(request):
 
 
 @login_required
-def gastos_list(request):
-    gastos = Gasto.objects.select_related('proyecto', 'proveedor').all()
+def gastos_list(request, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
+
+    # Filtrar gastos por empresa (a través de proyecto)
+    if empresa:
+        gastos = Gasto.objects.filter(proyecto__empresa=empresa).select_related('proyecto', 'proveedor')
+    else:
+        gastos = Gasto.objects.select_related('proyecto', 'proveedor').all()
 
     # Filtros
     proyecto_id = request.GET.get('proyecto')
@@ -266,10 +358,15 @@ def gastos_list(request):
     if fecha_hasta:
         gastos = gastos.filter(fecha_gasto__lte=fecha_hasta)
 
-    # Datos para filtros
-    proyectos = Proyecto.objects.all().order_by('nombre')
+    # Datos para filtros (filtrados por empresa)
+    if empresa:
+        proyectos = Proyecto.objects.filter(empresa=empresa).order_by('nombre')
+        proveedores = Proveedor.objects.filter(empresa=empresa, activo=True).order_by('nombre')
+    else:
+        proyectos = Proyecto.objects.all().order_by('nombre')
+        proveedores = Proveedor.objects.filter(activo=True).order_by('nombre')
+
     tipos_gasto = Gasto.TIPO_GASTO_CHOICES
-    proveedores = Proveedor.objects.filter(activo=True).order_by('nombre')
 
     return render(request, 'proyectos/gastos_list.html', {
         'gastos': gastos,
@@ -286,8 +383,14 @@ def gastos_list(request):
 
 
 @login_required
-def clientes_list(request):
-    clientes = Cliente.objects.all()
+def clientes_list(request, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
+
+    # Filtrar clientes por empresa
+    if empresa:
+        clientes = Cliente.objects.filter(empresa=empresa)
+    else:
+        clientes = Cliente.objects.all()
 
     # Filtros
     cliente_id = request.GET.get('cliente')
@@ -301,8 +404,11 @@ def clientes_list(request):
     elif estado == '0':
         clientes = clientes.filter(activo=False)
 
-    # Datos para filtros
-    todos_clientes = Cliente.objects.all().order_by('nombre')
+    # Datos para filtros (filtrados por empresa)
+    if empresa:
+        todos_clientes = Cliente.objects.filter(empresa=empresa).order_by('nombre')
+    else:
+        todos_clientes = Cliente.objects.all().order_by('nombre')
 
     return render(request, 'proyectos/clientes_list.html', {
         'clientes': clientes,
@@ -315,45 +421,55 @@ def clientes_list(request):
 # ====== VISTAS CRUD (Create, Read, Update, Delete) ======
 
 @login_required
-def cliente_create(request):
+def cliente_create(request, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
+
     if request.method == 'POST':
         form = ClienteForm(request.POST)
         if form.is_valid():
-            form.save()
+            cliente = form.save(commit=False)
+            cliente.empresa = empresa  # Asignar empresa automáticamente
+            cliente.save()
             messages.success(request, 'Cliente creado exitosamente.')
-            return redirect('clientes_list')
+            return redirect('clientes_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
         form = ClienteForm()
     return render(request, 'proyectos/cliente_form.html', {'form': form})
 
 
 @login_required
-def cliente_update(request, pk):
+def cliente_update(request, pk, empresa_codigo=None):
     cliente = get_object_or_404(Cliente, pk=pk)
     if request.method == 'POST':
         form = ClienteForm(request.POST, instance=cliente)
         if form.is_valid():
             form.save()
             messages.success(request, 'Cliente actualizado exitosamente.')
-            return redirect('clientes_list')
+            return redirect('clientes_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
         form = ClienteForm(instance=cliente)
     return render(request, 'proyectos/cliente_form.html', {'form': form, 'object': cliente})
 
 
 @login_required
-def cliente_delete(request, pk):
+def cliente_delete(request, pk, empresa_codigo=None):
     cliente = get_object_or_404(Cliente, pk=pk)
     if request.method == 'POST':
         cliente.delete()
         messages.success(request, 'Cliente eliminado exitosamente.')
-        return redirect('clientes_list')
+        return redirect('clientes_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     return render(request, 'proyectos/confirm_delete.html', {'object': cliente, 'tipo': 'cliente'})
 
 
 @login_required
-def proveedores_list(request):
-    proveedores = Proveedor.objects.all()
+def proveedores_list(request, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
+
+    # Filtrar proveedores por empresa
+    if empresa:
+        proveedores = Proveedor.objects.filter(empresa=empresa)
+    else:
+        proveedores = Proveedor.objects.all()
 
     # Filtros
     proveedor_id = request.GET.get('proveedor')
@@ -370,9 +486,13 @@ def proveedores_list(request):
 
     proveedores = proveedores.order_by('nombre')
 
-    # Datos para filtros
-    tipos_proveedor_unicos = Proveedor.objects.exclude(tipo_proveedor__isnull=True).exclude(tipo_proveedor='').values_list('tipo_proveedor', flat=True).distinct().order_by('tipo_proveedor')
-    todos_proveedores = Proveedor.objects.all().order_by('nombre')
+    # Datos para filtros (filtrados por empresa)
+    if empresa:
+        tipos_proveedor_unicos = Proveedor.objects.filter(empresa=empresa).exclude(tipo_proveedor__isnull=True).exclude(tipo_proveedor='').values_list('tipo_proveedor', flat=True).distinct().order_by('tipo_proveedor')
+        todos_proveedores = Proveedor.objects.filter(empresa=empresa).order_by('nombre')
+    else:
+        tipos_proveedor_unicos = Proveedor.objects.exclude(tipo_proveedor__isnull=True).exclude(tipo_proveedor='').values_list('tipo_proveedor', flat=True).distinct().order_by('tipo_proveedor')
+        todos_proveedores = Proveedor.objects.all().order_by('nombre')
 
     return render(request, 'proyectos/proveedores_list.html', {
         'proveedores': proveedores,
@@ -385,128 +505,147 @@ def proveedores_list(request):
 
 
 @login_required
-def proveedor_create(request):
+def proveedor_create(request, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
+
     if request.method == 'POST':
         form = ProveedorForm(request.POST)
         if form.is_valid():
-            form.save()
+            proveedor = form.save(commit=False)
+            proveedor.empresa = empresa  # Asignar empresa automáticamente
+            proveedor.save()
             messages.success(request, 'Proveedor creado exitosamente.')
-            return redirect('proveedores_list')
+            return redirect('proveedores_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
         form = ProveedorForm()
     return render(request, 'proyectos/proveedor_form.html', {'form': form})
 
 
 @login_required
-def proveedor_update(request, pk):
+def proveedor_update(request, pk, empresa_codigo=None):
     proveedor = get_object_or_404(Proveedor, pk=pk)
     if request.method == 'POST':
         form = ProveedorForm(request.POST, instance=proveedor)
         if form.is_valid():
             form.save()
             messages.success(request, 'Proveedor actualizado exitosamente.')
-            return redirect('proveedores_list')
+            return redirect('proveedores_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
         form = ProveedorForm(instance=proveedor)
     return render(request, 'proyectos/proveedor_form.html', {'form': form, 'object': proveedor})
 
 
 @login_required
-def proveedor_delete(request, pk):
+def proveedor_delete(request, pk, empresa_codigo=None):
     proveedor = get_object_or_404(Proveedor, pk=pk)
     if request.method == 'POST':
         proveedor.delete()
         messages.success(request, 'Proveedor eliminado exitosamente.')
-        return redirect('proveedores_list')
+        return redirect('proveedores_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     return render(request, 'proyectos/confirm_delete.html', {'object': proveedor, 'tipo': 'proveedor'})
 
 
 @login_required
-def proyecto_create(request):
+def proyecto_create(request, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
+
     if request.method == 'POST':
         form = ProyectoForm(request.POST)
         if form.is_valid():
-            form.save()
+            proyecto = form.save(commit=False)
+            proyecto.empresa = empresa  # Asignar empresa automáticamente
+            proyecto.save()
             messages.success(request, 'Proyecto creado exitosamente.')
-            return redirect('proyectos_list')
+            return redirect('proyectos_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
         form = ProyectoForm()
     return render(request, 'proyectos/proyecto_form.html', {'form': form})
 
 
 @login_required
-def proyecto_update(request, pk):
+def proyecto_update(request, pk, empresa_codigo=None):
     proyecto = get_object_or_404(Proyecto, pk=pk)
     if request.method == 'POST':
         form = ProyectoForm(request.POST, instance=proyecto)
         if form.is_valid():
             form.save()
             messages.success(request, 'Proyecto actualizado exitosamente.')
-            return redirect('proyecto_detail', pk=pk)
+            return redirect('proyecto_detail', empresa_codigo=request.empresa.codigo if request.empresa else 'default', pk=pk)
     else:
         form = ProyectoForm(instance=proyecto)
     return render(request, 'proyectos/proyecto_form.html', {'form': form, 'object': proyecto})
 
 
 @login_required
-def proyecto_delete(request, pk):
+def proyecto_delete(request, pk, empresa_codigo=None):
     proyecto = get_object_or_404(Proyecto, pk=pk)
     if request.method == 'POST':
         proyecto.delete()
         messages.success(request, 'Proyecto eliminado exitosamente.')
-        return redirect('proyectos_list')
+        return redirect('proyectos_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     return render(request, 'proyectos/confirm_delete.html', {'object': proyecto, 'tipo': 'proyecto'})
 
 
 @login_required
-def empleado_create(request):
+def empleado_create(request, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
+
     if request.method == 'POST':
         form = EmpleadoForm(request.POST)
         if form.is_valid():
-            form.save()
+            empleado = form.save(commit=False)
+            empleado.empresa = empresa  # Asignar empresa automáticamente
+            empleado.save()
             messages.success(request, 'Empleado creado exitosamente.')
-            return redirect('empleados_list')
+            return redirect('empleados_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
         form = EmpleadoForm()
     return render(request, 'proyectos/empleado_form.html', {'form': form})
 
 
 @login_required
-def empleado_update(request, pk):
+def empleado_update(request, pk, empresa_codigo=None):
     empleado = get_object_or_404(Empleado, pk=pk)
     if request.method == 'POST':
         form = EmpleadoForm(request.POST, instance=empleado)
         if form.is_valid():
             form.save()
             messages.success(request, 'Empleado actualizado exitosamente.')
-            return redirect('empleados_list')
+            return redirect('empleados_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
         form = EmpleadoForm(instance=empleado)
     return render(request, 'proyectos/empleado_form.html', {'form': form, 'object': empleado})
 
 
 @login_required
-def empleado_delete(request, pk):
+def empleado_delete(request, pk, empresa_codigo=None):
     empleado = get_object_or_404(Empleado, pk=pk)
     if request.method == 'POST':
         empleado.delete()
         messages.success(request, 'Empleado eliminado exitosamente.')
-        return redirect('empleados_list')
+        return redirect('empleados_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     return render(request, 'proyectos/confirm_delete.html', {'object': empleado, 'tipo': 'empleado'})
 
 
 # ====== ASIGNACIONES DE EMPLEADOS ======
 
 @login_required
-def asignaciones_list(request):
-    asignaciones = AsignacionEmpleado.objects.select_related('proyecto', 'empleado').all()
+def asignaciones_list(request, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
+
+    # Filtrar asignaciones por empresa (a través de proyecto)
+    if empresa:
+        asignaciones = AsignacionEmpleado.objects.filter(proyecto__empresa=empresa).select_related('proyecto', 'empleado')
+    else:
+        asignaciones = AsignacionEmpleado.objects.select_related('proyecto', 'empleado').all()
+
     return render(request, 'proyectos/asignaciones_list.html', {
         'asignaciones': asignaciones,
     })
 
 
 @login_required
-def asignacion_create(request):
+def asignacion_create(request, empresa_codigo=None):
     from .forms import AsignacionEmpleadoForm
     proyecto_id = request.GET.get('proyecto')
 
@@ -528,7 +667,7 @@ def asignacion_create(request):
 
 
 @login_required
-def asignacion_update(request, pk):
+def asignacion_update(request, pk, empresa_codigo=None):
     from .forms import AsignacionEmpleadoForm
     asignacion = get_object_or_404(AsignacionEmpleado, pk=pk)
     proyecto_id = asignacion.proyecto.id
@@ -539,14 +678,14 @@ def asignacion_update(request, pk):
             form.save()
             messages.success(request, 'Asignación actualizada exitosamente.')
             # Siempre redirigir al detalle del proyecto
-            return redirect('proyecto_detail', pk=proyecto_id)
+            return redirect('proyecto_detail', empresa_codigo=request.empresa.codigo if request.empresa else 'default', pk=proyecto_id)
     else:
         form = AsignacionEmpleadoForm(instance=asignacion)
     return render(request, 'proyectos/asignacion_form.html', {'form': form, 'object': asignacion})
 
 
 @login_required
-def asignacion_delete(request, pk):
+def asignacion_delete(request, pk, empresa_codigo=None):
     asignacion = get_object_or_404(AsignacionEmpleado, pk=pk)
     proyecto_id = asignacion.proyecto.id  # Guardar antes de eliminar
 
@@ -554,49 +693,49 @@ def asignacion_delete(request, pk):
         asignacion.delete()
         messages.success(request, 'Empleado desasignado exitosamente.')
         # Siempre redirigir al detalle del proyecto
-        return redirect('proyecto_detail', pk=proyecto_id)
+        return redirect('proyecto_detail', empresa_codigo=request.empresa.codigo if request.empresa else 'default', pk=proyecto_id)
     return render(request, 'proyectos/confirm_delete.html', {'object': asignacion, 'tipo': 'asignación'})
 
 
 @login_required
-def gasto_create(request):
+def gasto_create(request, empresa_codigo=None):
     if request.method == 'POST':
         form = GastoForm(request.POST)
         if form.is_valid():
             form.save()
             messages.success(request, 'Gasto registrado exitosamente.')
-            return redirect('gastos_list')
+            return redirect('gastos_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
         form = GastoForm()
     return render(request, 'proyectos/gasto_form.html', {'form': form})
 
 
 @login_required
-def gasto_update(request, pk):
+def gasto_update(request, pk, empresa_codigo=None):
     gasto = get_object_or_404(Gasto, pk=pk)
     if request.method == 'POST':
         form = GastoForm(request.POST, instance=gasto)
         if form.is_valid():
             form.save()
             messages.success(request, 'Gasto actualizado exitosamente.')
-            return redirect('gastos_list')
+            return redirect('gastos_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
         form = GastoForm(instance=gasto)
     return render(request, 'proyectos/gasto_form.html', {'form': form, 'object': gasto})
 
 
 @login_required
-def gasto_delete(request, pk):
+def gasto_delete(request, pk, empresa_codigo=None):
     gasto = get_object_or_404(Gasto, pk=pk)
     if request.method == 'POST':
         gasto.delete()
         messages.success(request, 'Gasto eliminado exitosamente.')
-        return redirect('gastos_list')
+        return redirect('gastos_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     return render(request, 'proyectos/confirm_delete.html', {'object': gasto, 'tipo': 'gasto'})
 
 
 @login_required
-def planilla_create(request):
+def planilla_create(request, empresa_codigo=None):
     if request.method == 'POST':
         form = PlanillaForm(request.POST)
         formset = DetallePlanillaFormSet(request.POST)
@@ -615,7 +754,7 @@ def planilla_create(request):
             horaextra_formset.save()
             deduccion_formset.save()
             messages.success(request, 'Planilla creada exitosamente.')
-            return redirect('planillas_list')
+            return redirect('planillas_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
         form = PlanillaForm()
         formset = DetallePlanillaFormSet()
@@ -642,7 +781,7 @@ def planilla_create(request):
 
 
 @login_required
-def planilla_update(request, pk):
+def planilla_update(request, pk, empresa_codigo=None):
     planilla = get_object_or_404(Planilla, pk=pk)
 
     if request.method == 'POST':
@@ -659,7 +798,7 @@ def planilla_update(request, pk):
             horaextra_formset.save()
             deduccion_formset.save()
             messages.success(request, 'Planilla actualizada exitosamente.')
-            return redirect('planillas_list')
+            return redirect('planillas_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
         form = PlanillaForm(instance=planilla)
         formset = DetallePlanillaFormSet(instance=planilla)
@@ -687,12 +826,12 @@ def planilla_update(request, pk):
 
 
 @login_required
-def planilla_delete(request, pk):
+def planilla_delete(request, pk, empresa_codigo=None):
     planilla = get_object_or_404(Planilla, pk=pk)
     if request.method == 'POST':
         planilla.delete()
         messages.success(request, 'Planilla eliminada exitosamente.')
-        return redirect('planillas_list')
+        return redirect('planillas_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     return render(request, 'proyectos/confirm_delete.html', {'object': planilla, 'tipo': 'planilla'})
 
 
@@ -721,7 +860,7 @@ def get_empleados_proyecto(request, proyecto_id):
 
 
 @login_required
-def planilla_save_empleados(request, pk):
+def planilla_save_empleados(request, pk, empresa_codigo=None):
     """Vista AJAX para guardar solo la sección de empleados de una planilla"""
     planilla = get_object_or_404(Planilla, pk=pk)
 
@@ -751,7 +890,7 @@ def planilla_save_empleados(request, pk):
 
 
 @login_required
-def planilla_save_bonificaciones(request, pk):
+def planilla_save_bonificaciones(request, pk, empresa_codigo=None):
     """Vista AJAX para guardar solo la sección de bonificaciones de una planilla"""
     planilla = get_object_or_404(Planilla, pk=pk)
 
@@ -780,7 +919,7 @@ def planilla_save_bonificaciones(request, pk):
 
 
 @login_required
-def planilla_save_deducciones(request, pk):
+def planilla_save_deducciones(request, pk, empresa_codigo=None):
     """Vista AJAX para guardar solo la sección de deducciones de una planilla"""
     planilla = get_object_or_404(Planilla, pk=pk)
 
@@ -809,7 +948,7 @@ def planilla_save_deducciones(request, pk):
 
 
 @login_required
-def planilla_save_horas_extra(request, pk):
+def planilla_save_horas_extra(request, pk, empresa_codigo=None):
     """Vista AJAX para guardar solo la sección de horas extra de una planilla"""
     planilla = get_object_or_404(Planilla, pk=pk)
 
@@ -960,10 +1099,23 @@ class PagoViewSet(viewsets.ModelViewSet):
 # ========== GESTIÓN DE USUARIOS ==========
 
 @login_required
-@rol_requerido('administrador')
-def usuarios_list(request):
-    """Vista para listar usuarios - Solo Administradores"""
-    usuarios = Usuario.objects.all()
+def usuarios_list(request, empresa_codigo=None):
+    """Vista para listar usuarios - Gerentes y Superusuarios"""
+    # Validar permisos: Solo Gerentes y Superusuarios
+    if not (request.user.is_superuser or request.user.rol == 'gerente'):
+        messages.error(request, 'No tienes permisos para acceder a esta sección.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    # Superusuarios ven todos los usuarios
+    if request.user.is_superuser:
+        usuarios = Usuario.objects.all()
+    else:
+        # Gerentes solo ven usuarios de SU empresa (excluyendo superusuarios)
+        empresa = get_empresa_from_request(request)
+        if empresa:
+            usuarios = Usuario.objects.filter(empresa=empresa, is_superuser=False)
+        else:
+            usuarios = Usuario.objects.none()
 
     # Filtros
     rol = request.GET.get('rol')
@@ -988,45 +1140,121 @@ def usuarios_list(request):
 
 
 @login_required
-@rol_requerido('administrador')
-def usuario_create(request):
-    """Vista para crear usuario - Solo Administradores"""
+def usuario_create(request, empresa_codigo=None):
+    """Vista para crear usuario - Gerentes y Superusuarios"""
+    # Validar permisos: Solo Gerentes y Superusuarios
+    if not (request.user.is_superuser or request.user.rol == 'gerente'):
+        messages.error(request, 'No tienes permisos para acceder a esta sección.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    empresa = get_empresa_from_request(request)
+
     if request.method == 'POST':
         form = UsuarioCreationForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Usuario creado exitosamente.')
-            return redirect('usuarios_list')
+            usuario = form.save(commit=False)
+
+            # Si es Gerente (NO superusuario), forzar la empresa a la suya
+            if not request.user.is_superuser:
+                if empresa:
+                    usuario.empresa = empresa
+                else:
+                    messages.error(request, 'No se puede crear usuario: no tienes empresa asignada.')
+                    return redirect('usuarios_list', empresa_codigo=empresa_codigo or 'default')
+
+            # Validar que Gerente no pueda crear superusuarios
+            if not request.user.is_superuser and usuario.is_superuser:
+                messages.error(request, 'No tienes permisos para crear superusuarios.')
+                return redirect('usuarios_list', empresa_codigo=empresa_codigo or 'default')
+
+            usuario.save()
+            form.save_m2m()  # Guardar relaciones many-to-many si existen
+            messages.success(request, f'Usuario {usuario.username} creado exitosamente.')
+            return redirect('usuarios_list', empresa_codigo=empresa.codigo if empresa else 'default')
     else:
         form = UsuarioCreationForm()
-    return render(request, 'proyectos/usuario_form.html', {'form': form})
+
+        # Si es Gerente, pre-seleccionar y bloquear su empresa
+        if not request.user.is_superuser and empresa:
+            form.initial['empresa'] = empresa
+
+    return render(request, 'proyectos/usuario_form.html', {
+        'form': form,
+        'es_gerente': request.user.rol == 'gerente' and not request.user.is_superuser,
+    })
 
 
 @login_required
-@rol_requerido('administrador')
-def usuario_update(request, pk):
-    """Vista para editar usuario - Solo Administradores"""
+def usuario_update(request, pk, empresa_codigo=None):
+    """Vista para editar usuario - Gerentes y Superusuarios"""
+    # Validar permisos: Solo Gerentes y Superusuarios
+    if not (request.user.is_superuser or request.user.rol == 'gerente'):
+        messages.error(request, 'No tienes permisos para acceder a esta sección.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
     usuario = get_object_or_404(Usuario, pk=pk)
+    empresa = get_empresa_from_request(request)
+
+    # Validar que Gerente solo pueda editar usuarios de SU empresa
+    if not request.user.is_superuser:
+        if usuario.empresa != empresa:
+            messages.error(request, 'No tienes permisos para editar usuarios de otra empresa.')
+            return redirect('usuarios_list', empresa_codigo=empresa.codigo if empresa else 'default')
+
     if request.method == 'POST':
         form = UsuarioUpdateForm(request.POST, instance=usuario)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Usuario actualizado exitosamente.')
-            return redirect('usuarios_list')
+            usuario_editado = form.save(commit=False)
+
+            # Si es Gerente (NO superusuario), no puede cambiar la empresa
+            if not request.user.is_superuser:
+                usuario_editado.empresa = empresa
+
+            # Validar que Gerente no pueda convertir a superusuario
+            if not request.user.is_superuser and usuario_editado.is_superuser:
+                messages.error(request, 'No tienes permisos para convertir usuarios en superusuarios.')
+                return redirect('usuarios_list', empresa_codigo=empresa.codigo if empresa else 'default')
+
+            usuario_editado.save()
+            messages.success(request, f'Usuario {usuario_editado.username} actualizado exitosamente.')
+            return redirect('usuarios_list', empresa_codigo=empresa.codigo if empresa else 'default')
     else:
         form = UsuarioUpdateForm(instance=usuario)
-    return render(request, 'proyectos/usuario_form.html', {'form': form, 'object': usuario})
+
+    return render(request, 'proyectos/usuario_form.html', {
+        'form': form,
+        'object': usuario,
+        'es_gerente': request.user.rol == 'gerente' and not request.user.is_superuser,
+    })
 
 
 @login_required
-@rol_requerido('administrador')
-def usuario_delete(request, pk):
-    """Vista para eliminar usuario - Solo Administradores"""
+def usuario_delete(request, pk, empresa_codigo=None):
+    """Vista para eliminar usuario - Gerentes y Superusuarios"""
+    # Validar permisos: Solo Gerentes y Superusuarios
+    if not (request.user.is_superuser or request.user.rol == 'gerente'):
+        messages.error(request, 'No tienes permisos para acceder a esta sección.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
     usuario = get_object_or_404(Usuario, pk=pk)
+    empresa = get_empresa_from_request(request)
+
+    # Validar que Gerente solo pueda eliminar usuarios de SU empresa
+    if not request.user.is_superuser:
+        if usuario.empresa != empresa:
+            messages.error(request, 'No tienes permisos para eliminar usuarios de otra empresa.')
+            return redirect('usuarios_list', empresa_codigo=empresa.codigo if empresa else 'default')
+
+        # Gerente no puede eliminar superusuarios
+        if usuario.is_superuser:
+            messages.error(request, 'No tienes permisos para eliminar superusuarios.')
+            return redirect('usuarios_list', empresa_codigo=empresa.codigo if empresa else 'default')
+
     if request.method == 'POST':
+        username = usuario.username
         usuario.delete()
-        messages.success(request, 'Usuario eliminado exitosamente.')
-        return redirect('usuarios_list')
+        messages.success(request, f'Usuario {username} eliminado exitosamente.')
+        return redirect('usuarios_list', empresa_codigo=empresa.codigo if empresa else 'default')
     return render(request, 'proyectos/confirm_delete.html', {'object': usuario, 'tipo': 'usuario'})
 
 
@@ -1113,7 +1341,7 @@ def orden_cambio_delete(request, pk):
         codigo = orden.codigo
         orden.delete()
         messages.success(request, f'Orden de cambio {codigo} eliminada exitosamente.')
-        return redirect('proyecto_detail', pk=proyecto_id)
+        return redirect('proyecto_detail', empresa_codigo=request.empresa.codigo if request.empresa else 'default', pk=proyecto_id)
 
     return render(request, 'proyectos/confirm_delete.html', {
         'object': orden,
@@ -1126,7 +1354,7 @@ def orden_cambio_delete(request, pk):
 
 @login_required
 @permiso_financiero_requerido
-def pago_create(request):
+def pago_create(request, empresa_codigo=None):
     """Vista para registrar pago/desembolso del cliente - Requiere permiso financiero"""
     if request.method == 'POST':
         proyecto_id = request.POST.get('proyecto')
@@ -1165,7 +1393,7 @@ def pago_create(request):
 
 @login_required
 @permiso_financiero_requerido
-def pago_update(request, pk):
+def pago_update(request, pk, empresa_codigo=None):
     """Vista para editar pago/desembolso - Requiere permiso financiero"""
     pago = get_object_or_404(Pago, pk=pk)
 
@@ -1192,7 +1420,7 @@ def pago_update(request, pk):
 
 @login_required
 @permiso_financiero_requerido
-def pago_delete(request, pk):
+def pago_delete(request, pk, empresa_codigo=None):
     """Vista para eliminar pago/desembolso - Requiere permiso financiero"""
     pago = get_object_or_404(Pago, pk=pk)
     proyecto_id = pago.proyecto.id
@@ -1201,12 +1429,93 @@ def pago_delete(request, pk):
         monto = pago.monto
         pago.delete()
         messages.success(request, f'Pago de ${monto} eliminado exitosamente.')
-        return redirect('proyecto_detail', pk=proyecto_id)
+        return redirect('proyecto_detail', empresa_codigo=request.empresa.codigo if request.empresa else 'default', pk=proyecto_id)
 
     return render(request, 'proyectos/confirm_delete.html', {
         'object': pago,
         'tipo': 'pago',
         'objeto_nombre': f'${pago.monto} del {pago.fecha_pago}'
     })
+
+
+# ====== VISTAS DE GESTIÓN DE EMPRESAS (SOLO SUPERUSUARIOS) ======
+
+@login_required
+def empresas_list(request, empresa_codigo=None):
+    """Vista para listar todas las empresas - Solo para superusuarios"""
+    if not request.user.is_superuser:
+        messages.error(request, 'No tienes permisos para acceder a esta sección.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    from .models import Empresa
+    empresas = Empresa.objects.all().order_by('nombre')
+
+    return render(request, 'proyectos/empresas_list.html', {
+        'empresas': empresas,
+    })
+
+
+@login_required
+def empresa_create(request, empresa_codigo=None):
+    """Vista para crear nueva empresa - Solo para superusuarios"""
+    if not request.user.is_superuser:
+        messages.error(request, 'No tienes permisos para acceder a esta sección.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    from .forms import EmpresaForm
+
+    if request.method == 'POST':
+        form = EmpresaForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Empresa creada exitosamente.')
+            return redirect('empresas_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+    else:
+        form = EmpresaForm()
+
+    return render(request, 'proyectos/empresa_form.html', {'form': form})
+
+
+@login_required
+def empresa_update(request, pk, empresa_codigo=None):
+    """Vista para editar empresa - Solo para superusuarios"""
+    if not request.user.is_superuser:
+        messages.error(request, 'No tienes permisos para acceder a esta sección.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    from .models import Empresa
+    from .forms import EmpresaForm
+
+    empresa = get_object_or_404(Empresa, pk=pk)
+
+    if request.method == 'POST':
+        form = EmpresaForm(request.POST, instance=empresa)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Empresa actualizada exitosamente.')
+            return redirect('empresas_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+    else:
+        form = EmpresaForm(instance=empresa)
+
+    return render(request, 'proyectos/empresa_form.html', {'form': form, 'object': empresa})
+
+
+@login_required
+def empresa_delete(request, pk, empresa_codigo=None):
+    """Vista para eliminar empresa - Solo para superusuarios"""
+    if not request.user.is_superuser:
+        messages.error(request, 'No tienes permisos para acceder a esta sección.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    from .models import Empresa
+
+    empresa = get_object_or_404(Empresa, pk=pk)
+
+    if request.method == 'POST':
+        empresa.delete()
+        messages.success(request, 'Empresa eliminada exitosamente.')
+        return redirect('empresas_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    return render(request, 'proyectos/confirm_delete.html', {'object': empresa, 'tipo': 'empresa'})
 
 

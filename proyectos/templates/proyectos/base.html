@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Sistema Constructora{% endblock %}</title>
+    <title>{% block title %}MultiProject Pro{% endblock %}</title>
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -252,61 +252,74 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-brand">
             <i class="bi bi-building"></i>
-            Constructora
+            MultiProject Pro
         </div>
 
         <nav class="nav flex-column">
             <!-- Dashboard -->
-            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' empresa_codigo %}">
                 <i class="bi bi-speedometer2"></i>Dashboard
             </a>
 
             <!-- Clientes -->
-            <a class="nav-link {% if 'clientes' in request.path %}active{% endif %}" href="{% url 'clientes_list' %}">
+            <a class="nav-link {% if 'clientes' in request.path %}active{% endif %}" href="{% url 'clientes_list' empresa_codigo %}">
                 <i class="bi bi-person-lines-fill"></i>Clientes
             </a>
 
             <!-- Proveedores -->
-            <a class="nav-link {% if 'proveedores' in request.path %}active{% endif %}" href="{% url 'proveedores_list' %}">
+            <a class="nav-link {% if 'proveedores' in request.path %}active{% endif %}" href="{% url 'proveedores_list' empresa_codigo %}">
                 <i class="bi bi-shop"></i>Proveedores
             </a>
 
             <!-- Empleados -->
-            <a class="nav-link {% if 'empleados' in request.path %}active{% endif %}" href="{% url 'empleados_list' %}">
+            <a class="nav-link {% if 'empleados' in request.path %}active{% endif %}" href="{% url 'empleados_list' empresa_codigo %}">
                 <i class="bi bi-people"></i>Empleados
             </a>
 
             <!-- Proyectos -->
-            <a class="nav-link {% if 'proyectos' in request.path %}active{% endif %}" href="{% url 'proyectos_list' %}">
+            <a class="nav-link {% if 'proyectos' in request.path %}active{% endif %}" href="{% url 'proyectos_list' empresa_codigo %}">
                 <i class="bi bi-briefcase"></i>Proyectos
             </a>
 
             <!-- Planillas -->
-            <a class="nav-link {% if 'planillas' in request.path %}active{% endif %}" href="{% url 'planillas_list' %}">
+            <a class="nav-link {% if 'planillas' in request.path %}active{% endif %}" href="{% url 'planillas_list' empresa_codigo %}">
                 <i class="bi bi-file-earmark-text"></i>Planillas
             </a>
 
             <!-- Gastos -->
-            <a class="nav-link {% if 'gastos' in request.path %}active{% endif %}" href="{% url 'gastos_list' %}">
+            <a class="nav-link {% if 'gastos' in request.path %}active{% endif %}" href="{% url 'gastos_list' empresa_codigo %}">
                 <i class="bi bi-receipt"></i>Gastos
             </a>
 
-            <!-- Usuarios (Solo Administradores) -->
-            {% if user.is_authenticated and user.rol == 'administrador' %}
-            <a class="nav-link {% if 'usuarios' in request.path %}active{% endif %}" href="{% url 'usuarios_list' %}">
-                <i class="bi bi-people-fill"></i>Usuarios
+            <!-- Usuarios (Gerentes y Superusuarios) -->
+            {% if user.is_authenticated %}
+                {% if user.rol == 'gerente' or user.is_superuser %}
+                <a class="nav-link {% if 'usuarios' in request.path %}active{% endif %}" href="{% url 'usuarios_list' empresa_codigo %}">
+                    <i class="bi bi-people-fill"></i>Usuarios
+                </a>
+                {% endif %}
+            {% endif %}
+
+            <!-- Empresas (Solo Superusuarios) -->
+            {% if user.is_authenticated and user.is_superuser %}
+            <a class="nav-link {% if 'empresas' in request.path %}active{% endif %}" href="{% url 'empresas_list' empresa_codigo %}">
+                <i class="bi bi-building-gear"></i>Empresas
             </a>
             {% endif %}
 
-            <!-- Administración -->
+            <!-- Administración (Solo Superusuarios) -->
+            {% if user.is_authenticated and user.is_superuser %}
             <a class="nav-link" href="/admin/">
                 <i class="bi bi-gear"></i>Administración
             </a>
+            {% endif %}
 
-            <!-- API REST -->
+            <!-- API REST (Solo Superusuarios) -->
+            {% if user.is_authenticated and user.is_superuser %}
             <a class="nav-link" href="/api/">
                 <i class="bi bi-code-slash"></i>API REST
             </a>
+            {% endif %}
 
             <hr style="border-color: rgba(255,255,255,0.2); margin: 20px 10px;">
 

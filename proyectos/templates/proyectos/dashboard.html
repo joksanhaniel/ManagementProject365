@@ -1,6 +1,6 @@
 {% extends 'proyectos/base.html' %}
 
-{% block title %}Dashboard - Sistema Constructora{% endblock %}
+{% block title %}Dashboard - MultiProject Pro{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -148,7 +148,7 @@
                             <tr>
                                 <td><strong>{{ proyecto.codigo }}</strong></td>
                                 <td>
-                                    <a href="{% url 'proyecto_detail' proyecto.id %}" class="text-decoration-none">
+                                    <a href="{% url 'proyecto_detail' empresa_codigo proyecto.id %}" class="text-decoration-none">
                                         {{ proyecto.nombre }}
                                     </a>
                                 </td>
@@ -200,22 +200,22 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-3 mb-3">
-                        <a href="{% url 'proyecto_create' %}" class="btn btn-primary w-100">
+                        <a href="{% url 'proyecto_create' empresa_codigo %}" class="btn btn-primary w-100">
                             <i class="bi bi-plus-circle"></i> Nuevo Proyecto
                         </a>
                     </div>
                     <div class="col-md-3 mb-3">
-                        <a href="{% url 'empleado_create' %}" class="btn btn-success w-100">
+                        <a href="{% url 'empleado_create' empresa_codigo %}" class="btn btn-success w-100">
                             <i class="bi bi-person-plus"></i> Nuevo Empleado
                         </a>
                     </div>
                     <div class="col-md-3 mb-3">
-                        <a href="{% url 'planilla_create' %}" class="btn btn-info w-100">
+                        <a href="{% url 'planilla_create' empresa_codigo %}" class="btn btn-info w-100">
                             <i class="bi bi-file-plus"></i> Nueva Planilla
                         </a>
                     </div>
                     <div class="col-md-3 mb-3">
-                        <a href="{% url 'gasto_create' %}" class="btn btn-warning w-100">
+                        <a href="{% url 'gasto_create' empresa_codigo %}" class="btn btn-warning w-100">
                             <i class="bi bi-cash"></i> Registrar Gasto
                         </a>
                     </div>

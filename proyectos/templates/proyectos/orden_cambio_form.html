@@ -1,7 +1,7 @@
 {% extends 'proyectos/base.html' %}
 
 {% block title %}
-    {% if orden %}Editar Orden de Cambio{% else %}Nueva Orden de Cambio{% endif %} - Sistema Constructora
+    {% if orden %}Editar Orden de Cambio{% else %}Nueva Orden de Cambio{% endif %} - MultiProject Pro
 {% endblock %}
 
 {% block content %}
@@ -17,7 +17,7 @@
         </h2>
     </div>
     <div class="col-md-4 text-end">
-        <a href="{% if proyecto_seleccionado %}{% url 'proyecto_detail' proyecto_seleccionado.id %}{% else %}{% url 'proyectos_list' %}{% endif %}" class="btn btn-secondary">
+        <a href="{% if proyecto_seleccionado %}{% url 'proyecto_detail' empresa_codigo proyecto_seleccionado.id %}{% else %}{% url 'proyectos_list' empresa_codigo %}{% endif %}" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Volver
         </a>
     </div>
@@ -115,7 +115,7 @@
                     </div>
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <a href="{% if proyecto_seleccionado %}{% url 'proyecto_detail' proyecto_seleccionado.id %}{% else %}{% url 'proyectos_list' %}{% endif %}"
+                        <a href="{% if proyecto_seleccionado %}{% url 'proyecto_detail' empresa_codigo proyecto_seleccionado.id %}{% else %}{% url 'proyectos_list' empresa_codigo %}{% endif %}"
                            class="btn btn-secondary">
                             <i class="bi bi-x"></i> Cancelar
                         </a>

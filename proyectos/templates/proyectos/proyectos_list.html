@@ -1,6 +1,6 @@
 {% extends 'proyectos/base.html' %}
 
-{% block title %}Proyectos - Sistema Constructora{% endblock %}
+{% block title %}Proyectos - MultiProject Pro{% endblock %}
 
 {% block extra_css %}
 <!-- Select2 CSS -->
@@ -15,7 +15,7 @@
         <p class="text-muted">Gestión de proyectos de construcción</p>
     </div>
     <div class="col-md-6 text-end">
-        <a href="{% url 'proyecto_create' %}" class="btn btn-primary">
+        <a href="{% url 'proyecto_create' empresa_codigo %}" class="btn btn-primary">
             <i class="bi bi-plus-circle"></i> Nuevo Proyecto
         </a>
     </div>
@@ -62,7 +62,7 @@
                 <button type="submit" class="btn btn-primary me-2">
                     <i class="bi bi-funnel"></i> Filtrar
                 </button>
-                <a href="{% url 'proyectos_list' %}" class="btn btn-secondary">
+                <a href="{% url 'proyectos_list' empresa_codigo %}" class="btn btn-secondary">
                     <i class="bi bi-x-circle"></i> Limpiar
                 </a>
             </div>
@@ -115,13 +115,13 @@
                             {{ proyecto.margen_utilidad|floatformat:2 }}%
                         </td>
                         <td class="table-actions">
-                            <a href="{% url 'proyecto_detail' proyecto.id %}" class="btn btn-sm btn-info" title="Ver detalles">
+                            <a href="{% url 'proyecto_detail' empresa_codigo proyecto.id %}" class="btn btn-sm btn-info" title="Ver detalles">
                                 <i class="bi bi-eye"></i>
                             </a>
-                            <a href="{% url 'proyecto_update' proyecto.id %}" class="btn btn-sm btn-warning" title="Editar">
+                            <a href="{% url 'proyecto_update' empresa_codigo proyecto.id %}" class="btn btn-sm btn-warning" title="Editar">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <a href="{% url 'proyecto_delete' proyecto.id %}" class="btn btn-sm btn-danger" title="Eliminar">
+                            <a href="{% url 'proyecto_delete' empresa_codigo proyecto.id %}" class="btn btn-sm btn-danger" title="Eliminar">
                                 <i class="bi bi-trash"></i>
                             </a>
                         </td>

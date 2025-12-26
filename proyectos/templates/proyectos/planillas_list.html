@@ -1,6 +1,6 @@
 {% extends 'proyectos/base.html' %}
 
-{% block title %}Planillas - Sistema Constructora{% endblock %}
+{% block title %}Planillas - MultiProject Pro{% endblock %}
 
 {% block extra_css %}
 <!-- Select2 CSS -->
@@ -15,7 +15,7 @@
         <p class="text-muted">Gestión de planillas de pago</p>
     </div>
     <div class="col-md-6 text-end">
-        <a href="{% url 'planilla_create' %}" class="btn btn-primary">
+        <a href="{% url 'planilla_create' empresa_codigo %}" class="btn btn-primary">
             <i class="bi bi-file-plus"></i> Nueva Planilla
         </a>
     </div>
@@ -67,7 +67,7 @@
                 <button type="submit" class="btn btn-primary me-2" title="Filtrar">
                     <i class="bi bi-funnel"></i>
                 </button>
-                <a href="{% url 'planillas_list' %}" class="btn btn-secondary" title="Limpiar">
+                <a href="{% url 'planillas_list' empresa_codigo %}" class="btn btn-secondary" title="Limpiar">
                     <i class="bi bi-x-circle"></i>
                 </a>
             </div>
@@ -108,10 +108,10 @@
                             {% endif %}
                         </td>
                         <td class="table-actions">
-                            <a href="{% url 'planilla_update' planilla.id %}" class="btn btn-sm btn-warning" title="Editar">
+                            <a href="{% url 'planilla_update' empresa_codigo planilla.id %}" class="btn btn-sm btn-warning" title="Editar">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <a href="{% url 'planilla_delete' planilla.id %}" class="btn btn-sm btn-danger" title="Eliminar">
+                            <a href="{% url 'planilla_delete' empresa_codigo planilla.id %}" class="btn btn-sm btn-danger" title="Eliminar">
                                 <i class="bi bi-trash"></i>
                             </a>
                         </td>
