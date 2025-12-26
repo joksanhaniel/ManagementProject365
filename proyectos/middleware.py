@@ -1,6 +1,9 @@
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse
 from .models import Empresa
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class EmpresaMiddleware:
@@ -10,10 +13,18 @@ class EmpresaMiddleware:
     URLs esperadas: /empresax/proyectos/, /empresax/clientes/, etc.
     """
 
+    # Rutas que no requieren validación de empresa
+    EXCLUDED_PATHS = ['/login/', '/logout/', '/admin/', '/static/', '/media/', '/seleccionar-empresa/', '/api/']
+
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
+        # Excluir rutas que no requieren validación de empresa
+        if any(request.path.startswith(path) for path in self.EXCLUDED_PATHS):
+            request.empresa = None
+            return self.get_response(request)
+
         # Detectar empresa desde la URL
         path_parts = request.path.strip('/').split('/')
 
@@ -25,6 +36,9 @@ class EmpresaMiddleware:
             except Empresa.DoesNotExist:
                 # Si no existe la empresa, continuar sin empresa en el contexto
                 request.empresa = None
+            except Exception as e:
+                logger.error(f"Error al obtener empresa: {e}")
+                request.empresa = None
         else:
             request.empresa = None
 
@@ -34,9 +48,13 @@ class EmpresaMiddleware:
                 # El usuario intenta acceder a una empresa que no es la suya
                 if request.user.empresa:
                     # Redirigir a su empresa
-                    return redirect(f'/{request.user.empresa.get_url_prefix()}{request.path[len(path_parts[0])+1:]}')
+                    new_path = request.path[len(path_parts[0])+1:]
+                    redirect_url = f'/{request.user.empresa.get_url_prefix()}{new_path}'
+                    logger.warning(f"Usuario {request.user.username} intentó acceder a empresa incorrecta. Redirigiendo.")
+                    return redirect(redirect_url)
                 else:
                     # Usuario sin empresa asignada - no debería pasar
+                    logger.error(f"Usuario {request.user.username} sin empresa asignada intentó acceder al sistema")
                     pass
 
         response = self.get_response(request)

@@ -160,8 +160,9 @@ fixtures/test_*.json
 # Migraciones de desarrollo (comentar si quieres commitear migraciones)
 # IMPORTANTE: Si trabajas en equipo, NO ignores las migraciones
 # Si trabajas solo, puedes ignorarlas y recrearlas en producción
-proyectos/migrations/*.py
-!proyectos/migrations/__init__.py
+# COMENTADO PARA PERMITIR MIGRACIONES EN GIT (necesario para producción)
+# proyectos/migrations/*.py
+# !proyectos/migrations/__init__.py
 
 # Scripts de desarrollo
 scripts/dev_*
