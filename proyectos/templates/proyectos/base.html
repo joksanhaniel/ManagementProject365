@@ -333,6 +333,30 @@
     <!-- Main Content -->
     <div class="main-content">
         <div class="container-fluid">
+            <!-- Mensajes de Django -->
+            {% if messages %}
+                <div class="messages-container mb-3">
+                    {% for message in messages %}
+                        {% if message.tags == 'error' %}
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        {% elif message.tags == 'debug' %}
+                            <div class="alert alert-secondary alert-dismissible fade show" role="alert">
+                        {% else %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {% endif %}
+                            <i class="bi
+                                {% if message.tags == 'success' %}bi-check-circle-fill
+                                {% elif message.tags == 'error' or message.tags == 'danger' %}bi-exclamation-triangle-fill
+                                {% elif message.tags == 'warning' %}bi-exclamation-circle-fill
+                                {% else %}bi-info-circle-fill{% endif %}
+                            "></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
             {% block content %}{% endblock %}
         </div>
     </div>

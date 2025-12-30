@@ -170,6 +170,13 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Límite de tamaño de archivos subidos
+# FILE_UPLOAD_MAX_MEMORY_SIZE: Archivos menores a este tamaño se mantienen en memoria (default 2.5MB)
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2621440  # 2.5MB en bytes
+
+# DATA_UPLOAD_MAX_MEMORY_SIZE: Tamaño máximo del cuerpo de la petición (POST data + archivos)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB en bytes
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 

@@ -103,13 +103,4 @@
         <i class="bi bi-info-circle"></i> Para cambiar la contraseña del usuario, use la opción "Cambiar contraseña" en el panel de administración de Django.
     </div>
     {% endif %}
-
-    <div class="d-flex justify-content-between mt-4">
-        <a href="{% url 'usuarios_list' empresa_codigo %}" class="btn btn-secondary">
-            <i class="bi bi-x-circle"></i> Cancelar
-        </a>
-        <button type="submit" class="btn btn-primary">
-            <i class="bi bi-save"></i> {% if object %}Actualizar{% else %}Crear{% endif %} Usuario
-        </button>
-    </div>
 {% endblock %}

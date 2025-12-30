@@ -550,7 +550,7 @@ def proyecto_create(request, empresa_codigo=None):
     empresa = get_empresa_from_request(request)
 
     if request.method == 'POST':
-        form = ProyectoForm(request.POST)
+        form = ProyectoForm(request.POST, empresa=empresa)
         if form.is_valid():
             proyecto = form.save(commit=False)
             proyecto.empresa = empresa  # Asignar empresa automáticamente
@@ -558,21 +558,22 @@ def proyecto_create(request, empresa_codigo=None):
             messages.success(request, 'Proyecto creado exitosamente.')
             return redirect('proyectos_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
-        form = ProyectoForm()
+        form = ProyectoForm(empresa=empresa)
     return render(request, 'proyectos/proyecto_form.html', {'form': form})
 
 
 @login_required
 def proyecto_update(request, pk, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
     proyecto = get_object_or_404(Proyecto, pk=pk)
     if request.method == 'POST':
-        form = ProyectoForm(request.POST, instance=proyecto)
+        form = ProyectoForm(request.POST, instance=proyecto, empresa=empresa)
         if form.is_valid():
             form.save()
             messages.success(request, 'Proyecto actualizado exitosamente.')
             return redirect('proyecto_detail', empresa_codigo=request.empresa.codigo if request.empresa else 'default', pk=pk)
     else:
-        form = ProyectoForm(instance=proyecto)
+        form = ProyectoForm(instance=proyecto, empresa=empresa)
     return render(request, 'proyectos/proyecto_form.html', {'form': form, 'object': proyecto})
 
 
@@ -647,10 +648,11 @@ def asignaciones_list(request, empresa_codigo=None):
 @login_required
 def asignacion_create(request, empresa_codigo=None):
     from .forms import AsignacionEmpleadoForm
+    empresa = get_empresa_from_request(request)
     proyecto_id = request.GET.get('proyecto')
 
     if request.method == 'POST':
-        form = AsignacionEmpleadoForm(request.POST)
+        form = AsignacionEmpleadoForm(request.POST, empresa=empresa)
         if form.is_valid():
             asignacion = form.save()
             messages.success(request, 'Empleado asignado exitosamente.')
@@ -661,7 +663,7 @@ def asignacion_create(request, empresa_codigo=None):
         initial = {}
         if proyecto_id:
             initial['proyecto'] = proyecto_id
-        form = AsignacionEmpleadoForm(initial=initial)
+        form = AsignacionEmpleadoForm(initial=initial, empresa=empresa)
 
     return render(request, 'proyectos/asignacion_form.html', {'form': form})
 
@@ -669,18 +671,19 @@ def asignacion_create(request, empresa_codigo=None):
 @login_required
 def asignacion_update(request, pk, empresa_codigo=None):
     from .forms import AsignacionEmpleadoForm
+    empresa = get_empresa_from_request(request)
     asignacion = get_object_or_404(AsignacionEmpleado, pk=pk)
     proyecto_id = asignacion.proyecto.id
 
     if request.method == 'POST':
-        form = AsignacionEmpleadoForm(request.POST, instance=asignacion)
+        form = AsignacionEmpleadoForm(request.POST, instance=asignacion, empresa=empresa)
         if form.is_valid():
             form.save()
             messages.success(request, 'Asignación actualizada exitosamente.')
             # Siempre redirigir al detalle del proyecto
             return redirect('proyecto_detail', empresa_codigo=request.empresa.codigo if request.empresa else 'default', pk=proyecto_id)
     else:
-        form = AsignacionEmpleadoForm(instance=asignacion)
+        form = AsignacionEmpleadoForm(instance=asignacion, empresa=empresa)
     return render(request, 'proyectos/asignacion_form.html', {'form': form, 'object': asignacion})
 
 
@@ -699,29 +702,46 @@ def asignacion_delete(request, pk, empresa_codigo=None):
 
 @login_required
 def gasto_create(request, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
+
     if request.method == 'POST':
-        form = GastoForm(request.POST)
+        form = GastoForm(request.POST, request.FILES, empresa=empresa)
         if form.is_valid():
-            form.save()
+            gasto = form.save()
             messages.success(request, 'Gasto registrado exitosamente.')
-            return redirect('gastos_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+            return redirect('gastos_list', empresa_codigo=empresa.codigo if empresa else 'default')
+        else:
+            messages.error(request, 'Por favor corrija los errores en el formulario.')
     else:
-        form = GastoForm()
-    return render(request, 'proyectos/gasto_form.html', {'form': form})
+        form = GastoForm(empresa=empresa)
+
+    return render(request, 'proyectos/gasto_form.html', {
+        'form': form,
+        'empresa_codigo': empresa_codigo
+    })
 
 
 @login_required
 def gasto_update(request, pk, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
     gasto = get_object_or_404(Gasto, pk=pk)
+
     if request.method == 'POST':
-        form = GastoForm(request.POST, instance=gasto)
+        form = GastoForm(request.POST, request.FILES, instance=gasto, empresa=empresa)
         if form.is_valid():
             form.save()
             messages.success(request, 'Gasto actualizado exitosamente.')
-            return redirect('gastos_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+            return redirect('gastos_list', empresa_codigo=empresa.codigo if empresa else 'default')
+        else:
+            messages.error(request, 'Por favor corrija los errores en el formulario.')
     else:
-        form = GastoForm(instance=gasto)
-    return render(request, 'proyectos/gasto_form.html', {'form': form, 'object': gasto})
+        form = GastoForm(instance=gasto, empresa=empresa)
+
+    return render(request, 'proyectos/gasto_form.html', {
+        'form': form,
+        'object': gasto,
+        'empresa_codigo': empresa_codigo
+    })
 
 
 @login_required
@@ -736,8 +756,10 @@ def gasto_delete(request, pk, empresa_codigo=None):
 
 @login_required
 def planilla_create(request, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
+
     if request.method == 'POST':
-        form = PlanillaForm(request.POST)
+        form = PlanillaForm(request.POST, empresa=empresa)
         formset = DetallePlanillaFormSet(request.POST)
         bonificacion_formset = BonificacionFormSet(request.POST)
         horaextra_formset = HoraExtraFormSet(request.POST)
@@ -756,18 +778,18 @@ def planilla_create(request, empresa_codigo=None):
             messages.success(request, 'Planilla creada exitosamente.')
             return redirect('planillas_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
-        form = PlanillaForm()
+        form = PlanillaForm(empresa=empresa)
         formset = DetallePlanillaFormSet()
         bonificacion_formset = BonificacionFormSet()
         horaextra_formset = HoraExtraFormSet()
         deduccion_formset = DeduccionFormSet()
 
-    # Obtener todos los empleados con su salario para JavaScript
-    empleados = Empleado.objects.filter(activo=True).values('id', 'salario_base')
+    # Obtener todos los empleados con su salario para JavaScript (filtrado por empresa)
+    empleados = Empleado.objects.filter(empresa=empresa, activo=True).values('id', 'salario_base')
     empleados_salarios = {emp['id']: float(emp['salario_base']) for emp in empleados}
 
-    # Obtener lista completa de empleados para los selects
-    empleados_list = Empleado.objects.filter(activo=True).order_by('apellidos', 'nombres')
+    # Obtener lista completa de empleados para los selects (filtrado por empresa)
+    empleados_list = Empleado.objects.filter(empresa=empresa, activo=True).order_by('apellidos', 'nombres')
 
     return render(request, 'proyectos/planilla_form.html', {
         'form': form,
@@ -782,10 +804,11 @@ def planilla_create(request, empresa_codigo=None):
 
 @login_required
 def planilla_update(request, pk, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
     planilla = get_object_or_404(Planilla, pk=pk)
 
     if request.method == 'POST':
-        form = PlanillaForm(request.POST, instance=planilla)
+        form = PlanillaForm(request.POST, instance=planilla, empresa=empresa)
         formset = DetallePlanillaFormSet(request.POST, instance=planilla)
         bonificacion_formset = BonificacionFormSet(request.POST, instance=planilla)
         horaextra_formset = HoraExtraFormSet(request.POST, instance=planilla)
@@ -800,18 +823,18 @@ def planilla_update(request, pk, empresa_codigo=None):
             messages.success(request, 'Planilla actualizada exitosamente.')
             return redirect('planillas_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
-        form = PlanillaForm(instance=planilla)
+        form = PlanillaForm(instance=planilla, empresa=empresa)
         formset = DetallePlanillaFormSet(instance=planilla)
         bonificacion_formset = BonificacionFormSet(instance=planilla)
         horaextra_formset = HoraExtraFormSet(instance=planilla)
         deduccion_formset = DeduccionFormSet(instance=planilla)
 
-    # Obtener todos los empleados con su salario para JavaScript
-    empleados = Empleado.objects.filter(activo=True).values('id', 'salario_base')
+    # Obtener todos los empleados con su salario para JavaScript (filtrado por empresa)
+    empleados = Empleado.objects.filter(empresa=empresa, activo=True).values('id', 'salario_base')
     empleados_salarios = {emp['id']: float(emp['salario_base']) for emp in empleados}
 
-    # Obtener lista completa de empleados para los selects
-    empleados_list = Empleado.objects.filter(activo=True).order_by('apellidos', 'nombres')
+    # Obtener lista completa de empleados para los selects (filtrado por empresa)
+    empleados_list = Empleado.objects.filter(empresa=empresa, activo=True).order_by('apellidos', 'nombres')
 
     return render(request, 'proyectos/planilla_form.html', {
         'form': form,

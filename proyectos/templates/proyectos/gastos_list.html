@@ -68,11 +68,11 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">Fecha Desde</label>
-                <input type="date" name="fecha_desde" class="form-control" value="{{ filtro_fecha_desde }}">
+                <input type="date" name="fecha_desde" class="form-control" value="{{ filtro_fecha_desde|default:'' }}">
             </div>
             <div class="col-md-2">
                 <label class="form-label">Fecha Hasta</label>
-                <input type="date" name="fecha_hasta" class="form-control" value="{{ filtro_fecha_hasta }}">
+                <input type="date" name="fecha_hasta" class="form-control" value="{{ filtro_fecha_hasta|default:'' }}">
             </div>
         </form>
         <div class="row mt-2">
@@ -101,6 +101,7 @@
                         <th>Proveedor</th>
                         <th class="text-end">Monto</th>
                         <th>Estado</th>
+                        <th>Adjunto</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -122,6 +123,15 @@
                                 <span class="badge bg-warning">Pendiente</span>
                             {% endif %}
                         </td>
+                        <td class="text-center">
+                            {% if gasto.archivo_adjunto %}
+                                <a href="{{ gasto.archivo_adjunto.url }}" target="_blank" class="btn btn-sm btn-info" title="Ver adjunto">
+                                    <i class="bi bi-file-earmark-{{ gasto.get_extension_archivo }}"></i>
+                                </a>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
                         <td class="table-actions">
                             <a href="{% url 'gasto_update' empresa_codigo gasto.id %}" class="btn btn-sm btn-warning" title="Editar">
                                 <i class="bi bi-pencil"></i>
@@ -133,7 +143,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center text-muted">
+                        <td colspan="9" class="text-center text-muted">
                             No hay gastos registrados
                         </td>
                     </tr>

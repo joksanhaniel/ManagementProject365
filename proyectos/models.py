@@ -1,7 +1,48 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
 from decimal import Decimal
+import os
+from django.utils.text import slugify
+
+
+def gasto_upload_path(instance, filename):
+    """
+    Genera la ruta de subida de archivos para gastos, separando por empresa.
+
+    Estructura: gastos/<empresa_codigo>/<proyecto_codigo>/<año>/<mes>/<filename>
+
+    Ejemplo: gastos/empresa1/PROY001/2024/12/factura_materiales.pdf
+    """
+    # Obtener empresa y proyecto del gasto
+    empresa_codigo = instance.proyecto.empresa.codigo if instance.proyecto.empresa else 'sin_empresa'
+    proyecto_codigo = instance.proyecto.codigo
+
+    # Obtener año y mes del gasto
+    fecha = instance.fecha_gasto
+    año = fecha.year
+    mes = f"{fecha.month:02d}"
+
+    # Limpiar el nombre del archivo
+    nombre_base, extension = os.path.splitext(filename)
+    nombre_limpio = slugify(nombre_base)
+    filename_final = f"{nombre_limpio}{extension.lower()}"
+
+    # Retornar ruta: gastos/empresa1/PROY001/2024/12/factura.pdf
+    return f'gastos/{empresa_codigo}/{proyecto_codigo}/{año}/{mes}/{filename_final}'
+
+
+def validar_tamanio_archivo(archivo):
+    """
+    Validador personalizado para verificar el tamaño del archivo.
+    Límite: 10MB
+    """
+    max_size_mb = 10
+    max_size_bytes = max_size_mb * 1024 * 1024
+
+    if archivo.size > max_size_bytes:
+        from django.core.exceptions import ValidationError
+        raise ValidationError(f'El archivo no debe superar los {max_size_mb}MB. Tamaño actual: {archivo.size / (1024*1024):.2f}MB')
 
 
 class EmpresaManager(models.Manager):
@@ -362,6 +403,22 @@ class Gasto(models.Model):
     pagado = models.BooleanField(default=False)
     fecha_pago = models.DateField(blank=True, null=True, verbose_name='Fecha de Pago')
 
+    # Campo para adjuntar factura o documento
+    archivo_adjunto = models.FileField(
+        upload_to=gasto_upload_path,
+        blank=True,
+        null=True,
+        verbose_name='Factura/Documento Adjunto',
+        help_text='Adjuntar factura, recibo o documento relacionado (PDF, Imagen, Excel). Máximo 10MB.',
+        validators=[
+            validar_tamanio_archivo,
+            FileExtensionValidator(
+                allowed_extensions=['pdf', 'jpg', 'jpeg', 'png', 'xlsx', 'xls', 'doc', 'docx'],
+                message='Solo se permiten archivos PDF, imágenes (JPG, PNG), Excel o Word.'
+            )
+        ]
+    )
+
     class Meta:
         verbose_name = 'Gasto'
         verbose_name_plural = 'Gastos'
@@ -369,6 +426,18 @@ class Gasto(models.Model):
 
     def __str__(self):
         return f"{self.proyecto.codigo} - {self.descripcion[:50]} - ${self.monto}"
+
+    def get_nombre_archivo(self):
+        """Retorna solo el nombre del archivo sin la ruta completa"""
+        if self.archivo_adjunto:
+            return os.path.basename(self.archivo_adjunto.name)
+        return None
+
+    def get_extension_archivo(self):
+        """Retorna la extensión del archivo en minúsculas"""
+        if self.archivo_adjunto:
+            return os.path.splitext(self.archivo_adjunto.name)[1].lower().replace('.', '')
+        return None
 
 
 class Pago(models.Model):
