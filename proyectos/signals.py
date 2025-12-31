@@ -1,6 +1,6 @@
-from django.db.models.signals import pre_save
+from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
-from .models import Empleado, HistorialSalario
+from .models import Empleado, HistorialSalario, Maquinaria, HistorialTarifaMaquinaria
 
 
 @receiver(pre_save, sender=Empleado)
@@ -46,9 +46,6 @@ def crear_historial_salario_inicial(sender, instance, created=False, **kwargs):
         instance._crear_historial_inicial = True
 
 
-# Alternativa: usar post_save para empleados nuevos
-from django.db.models.signals import post_save
-
 @receiver(post_save, sender=Empleado)
 def crear_historial_inicial_empleado(sender, instance, created, **kwargs):
     """
@@ -60,4 +57,41 @@ def crear_historial_inicial_empleado(sender, instance, created, **kwargs):
             salario_anterior=None,
             salario_nuevo=instance.salario_base,
             motivo='Salario inicial al crear empleado'
+        )
+
+
+# ====== SIGNALS PARA MAQUINARIA ======
+
+@receiver(pre_save, sender=Maquinaria)
+def crear_historial_tarifa_maquinaria(sender, instance, **kwargs):
+    """
+    Crea un registro en el historial cuando cambia la tarifa_hora de una maquinaria
+    """
+    if instance.pk:  # Solo si la maquinaria ya existe
+        try:
+            maquinaria_anterior = Maquinaria.objects.get(pk=instance.pk)
+
+            # Verificar si cambió la tarifa
+            if maquinaria_anterior.tarifa_hora != instance.tarifa_hora:
+                HistorialTarifaMaquinaria.objects.create(
+                    maquinaria=instance,
+                    tarifa_anterior=maquinaria_anterior.tarifa_hora,
+                    tarifa_nueva=instance.tarifa_hora,
+                    motivo='Cambio de tarifa'
+                )
+        except Maquinaria.DoesNotExist:
+            pass
+
+
+@receiver(post_save, sender=Maquinaria)
+def crear_historial_tarifa_inicial(sender, instance, created, **kwargs):
+    """
+    Crea el primer registro de historial cuando se crea una maquinaria nueva
+    """
+    if created and instance.tarifa_hora:
+        HistorialTarifaMaquinaria.objects.create(
+            maquinaria=instance,
+            tarifa_anterior=None,
+            tarifa_nueva=instance.tarifa_hora,
+            motivo='Tarifa inicial'
         )

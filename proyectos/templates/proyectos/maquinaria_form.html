@@ -1,0 +1,176 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}{% if object %}Editar{% else %}Nueva{% endif %} Maquinaria{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="bi bi-truck"></i> {% if object %}Editar Maquinaria{% else %}Nueva Maquinaria{% endif %}</h2>
+        <p class="text-muted">Complete la información de la maquinaria</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'maquinarias_list' empresa_codigo %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Datos de la Maquinaria</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.codigo.id_for_label }}" class="form-label fw-semibold">
+                                Código <span class="text-danger">*</span>
+                            </label>
+                            {{ form.codigo }}
+                            {% if form.codigo.errors %}
+                            <div class="invalid-feedback d-block">{{ form.codigo.errors }}</div>
+                            {% endif %}
+                            <small class="text-muted">Código único de identificación (ej: MAQ001)</small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.tipo.id_for_label }}" class="form-label fw-semibold">
+                                Tipo de Maquinaria <span class="text-danger">*</span>
+                            </label>
+                            {{ form.tipo }}
+                            {% if form.tipo.errors %}
+                            <div class="invalid-feedback d-block">{{ form.tipo.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.nombre.id_for_label }}" class="form-label fw-semibold">
+                            Nombre/Descripción <span class="text-danger">*</span>
+                        </label>
+                        {{ form.nombre }}
+                        {% if form.nombre.errors %}
+                        <div class="invalid-feedback d-block">{{ form.nombre.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.marca.id_for_label }}" class="form-label fw-semibold">
+                                Marca
+                            </label>
+                            {{ form.marca }}
+                            {% if form.marca.errors %}
+                            <div class="invalid-feedback d-block">{{ form.marca.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.modelo.id_for_label }}" class="form-label fw-semibold">
+                                Modelo
+                            </label>
+                            {{ form.modelo }}
+                            {% if form.modelo.errors %}
+                            <div class="invalid-feedback d-block">{{ form.modelo.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.placa.id_for_label }}" class="form-label fw-semibold">
+                                Placa/Matrícula
+                            </label>
+                            {{ form.placa }}
+                            {% if form.placa.errors %}
+                            <div class="invalid-feedback d-block">{{ form.placa.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3">Horómetro y Tarifa</h6>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.horometro_actual.id_for_label }}" class="form-label fw-semibold">
+                                Horómetro Actual (horas) <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                {{ form.horometro_actual }}
+                                <span class="input-group-text">hrs</span>
+                            </div>
+                            {% if form.horometro_actual.errors %}
+                            <div class="invalid-feedback d-block">{{ form.horometro_actual.errors }}</div>
+                            {% endif %}
+                            <small class="text-muted">Horas acumuladas de uso</small>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.tarifa_hora.id_for_label }}" class="form-label fw-semibold">
+                                Tarifa por Hora <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">L.</span>
+                                {{ form.tarifa_hora }}
+                            </div>
+                            {% if form.tarifa_hora.errors %}
+                            <div class="invalid-feedback d-block">{{ form.tarifa_hora.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.estado.id_for_label }}" class="form-label fw-semibold">
+                                Estado <span class="text-danger">*</span>
+                            </label>
+                            {{ form.estado }}
+                            {% if form.estado.errors %}
+                            <div class="invalid-feedback d-block">{{ form.estado.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.observaciones.id_for_label }}" class="form-label fw-semibold">
+                            Observaciones
+                        </label>
+                        {{ form.observaciones }}
+                        {% if form.observaciones.errors %}
+                        <div class="invalid-feedback d-block">{{ form.observaciones.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-check mb-3">
+                        {{ form.activo }}
+                        <label class="form-check-label" for="{{ form.activo.id_for_label }}">
+                            Activo
+                        </label>
+                        {% if form.activo.errors %}
+                        <div class="invalid-feedback d-block">{{ form.activo.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'maquinarias_list' empresa_codigo %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-save"></i> Guardar Maquinaria
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

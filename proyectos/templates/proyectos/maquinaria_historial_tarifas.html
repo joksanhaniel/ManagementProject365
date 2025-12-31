@@ -1,0 +1,121 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}Historial de Tarifas - {{ maquinaria.codigo }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="bi bi-clock-history"></i> Historial de Tarifas</h2>
+        <p class="text-muted">
+            <strong>{{ maquinaria.codigo }}</strong> - {{ maquinaria.nombre }}
+        </p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'maquinarias_list' empresa_codigo %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Información Actual</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <strong>Código:</strong><br>
+                {{ maquinaria.codigo }}
+            </div>
+            <div class="col-md-3">
+                <strong>Tipo:</strong><br>
+                {{ maquinaria.get_tipo_display }}
+            </div>
+            <div class="col-md-3">
+                <strong>Tarifa Actual:</strong><br>
+                <span class="badge bg-success fs-6">L. {{ maquinaria.tarifa_hora|floatformat:2 }}/hora</span>
+            </div>
+            <div class="col-md-3">
+                <strong>Horómetro Actual:</strong><br>
+                {{ maquinaria.horometro_actual|floatformat:2 }} hrs
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-list-ul"></i> Historial de Cambios de Tarifa</h5>
+    </div>
+    <div class="card-body">
+        {% if historial %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th width="20%">Fecha del Cambio</th>
+                        <th width="20%">Tarifa Anterior</th>
+                        <th width="20%">Tarifa Nueva</th>
+                        <th width="15%">Variación</th>
+                        <th width="25%">Motivo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cambio in historial %}
+                    <tr>
+                        <td>
+                            <strong>{{ cambio.fecha_cambio|date:"d/m/Y" }}</strong><br>
+                            <small class="text-muted">{{ cambio.fecha_cambio|date:"H:i:s" }}</small>
+                        </td>
+                        <td>
+                            {% if cambio.tarifa_anterior %}
+                                L. {{ cambio.tarifa_anterior|floatformat:2 }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong class="text-primary">L. {{ cambio.tarifa_nueva|floatformat:2 }}</strong>
+                        </td>
+                        <td>
+                            {% if cambio.tarifa_anterior %}
+                                {% widthratio cambio.tarifa_nueva cambio.tarifa_anterior 100 as porcentaje %}
+                                {% if cambio.tarifa_nueva > cambio.tarifa_anterior %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-arrow-up"></i> +{{ porcentaje|add:"-100" }}%
+                                    </span>
+                                {% elif cambio.tarifa_nueva < cambio.tarifa_anterior %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-arrow-down"></i> {{ porcentaje|add:"-100" }}%
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Sin cambio</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-info"><i class="bi bi-star-fill"></i> Inicial</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ cambio.motivo|default:"-" }}
+                            {% if cambio.usuario %}
+                                <br><small class="text-muted">Por: {{ cambio.usuario.username }}</small>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-3 p-3 bg-light rounded">
+            <strong><i class="bi bi-list-check"></i> Total de Cambios:</strong> {{ historial|length }}
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            No hay cambios de tarifa registrados para esta maquinaria.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

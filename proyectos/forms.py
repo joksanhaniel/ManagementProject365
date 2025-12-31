@@ -60,6 +60,7 @@ class EmpleadoForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        empresa = kwargs.pop('empresa', None)
         super().__init__(*args, **kwargs)
         # Forzar formato de fecha para inputs type="date"
         self.fields['fecha_ingreso'].input_formats = ['%Y-%m-%d']
@@ -443,6 +444,150 @@ class DeduccionForm(forms.ModelForm):
         else:
             self.fields['empleado'].queryset = Empleado.objects.filter(activo=True).order_by('apellidos', 'nombres')
             self.fields['planilla'].queryset = Planilla.objects.all().order_by('-fecha_pago')
+
+
+# ====== FORMULARIOS DE MAQUINARIA ======
+
+class MaquinariaForm(forms.ModelForm):
+    """Formulario para crear y editar maquinarias"""
+
+    class Meta:
+        from .models import Maquinaria
+        model = Maquinaria
+        exclude = ['empresa']  # Empresa se asigna automáticamente en la vista
+        widgets = {
+            'codigo': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'MAQ001'
+            }),
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Retroexcavadora CAT 320'
+            }),
+            'tipo': forms.Select(attrs={'class': 'form-select'}),
+            'marca': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Caterpillar'
+            }),
+            'modelo': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '320D'
+            }),
+            'placa': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'PBC-1234'
+            }),
+            'horometro_actual': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '0.00'
+            }),
+            'tarifa_hora': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '500.00'
+            }),
+            'estado': forms.Select(attrs={'class': 'form-select'}),
+            'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'observaciones': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3
+            }),
+        }
+
+
+class UsoMaquinariaForm(forms.ModelForm):
+    """Formulario para registrar uso de maquinaria en proyectos"""
+
+    class Meta:
+        from .models import UsoMaquinaria
+        model = UsoMaquinaria
+        fields = ['proyecto', 'maquinaria', 'fecha_inicio', 'fecha_fin', 'horometro_inicial',
+                  'horometro_final', 'tarifa_aplicada', 'operador', 'descripcion_trabajo', 'observaciones']
+        widgets = {
+            'proyecto': forms.Select(attrs={'class': 'form-select'}),
+            'maquinaria': forms.Select(attrs={'class': 'form-select'}),
+            'fecha_inicio': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'fecha_fin': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'horometro_inicial': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '1000.00',
+                'readonly': 'readonly'
+            }),
+            'horometro_final': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '1050.00'
+            }),
+            'tarifa_aplicada': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '500.00',
+                'readonly': 'readonly'
+            }),
+            'operador': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'descripcion_trabajo': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Excavación de zanja para cimientos'
+            }),
+            'observaciones': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        empresa = kwargs.pop('empresa', None)
+        super().__init__(*args, **kwargs)
+
+        # Forzar formato de fecha para inputs type="date"
+        self.fields['fecha_inicio'].input_formats = ['%Y-%m-%d']
+        self.fields['fecha_fin'].input_formats = ['%Y-%m-%d']
+        self.fields['fecha_fin'].required = False
+        self.fields['horometro_final'].required = False
+        self.fields['operador'].required = False
+
+        # Filtrar proyectos, maquinarias y operadores por empresa
+        if empresa:
+            from .models import Proyecto, Maquinaria, Usuario
+            self.fields['proyecto'].queryset = Proyecto.objects.filter(empresa=empresa).order_by('nombre')
+
+            # Filtrar maquinarias: solo mostrar disponibles en creación, todas en edición
+            if self.instance and self.instance.pk:
+                # En edición, mostrar todas (para que se pueda ver la seleccionada)
+                self.fields['maquinaria'].queryset = Maquinaria.objects.filter(empresa=empresa, activo=True).order_by('codigo')
+            else:
+                # En creación, solo mostrar disponibles
+                self.fields['maquinaria'].queryset = Maquinaria.objects.filter(
+                    empresa=empresa,
+                    activo=True,
+                    estado='disponible'
+                ).order_by('codigo')
+
+            # Filtrar operadores: solo usuarios con rol 'operador'
+            self.fields['operador'].queryset = Usuario.objects.filter(
+                empresa=empresa,
+                rol='operador',
+                is_active=True
+            ).order_by('username')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        horometro_inicial = cleaned_data.get('horometro_inicial')
+        horometro_final = cleaned_data.get('horometro_final')
+
+        # Validar que horómetro final sea mayor que inicial
+        if horometro_final and horometro_inicial:
+            if horometro_final <= horometro_inicial:
+                raise forms.ValidationError({
+                    'horometro_final': 'El horómetro final debe ser mayor al inicial'
+                })
+
+        return cleaned_data
 
 
 # ====== FORMULARIO DE EMPRESAS ======

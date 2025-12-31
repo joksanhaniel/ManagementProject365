@@ -195,6 +195,7 @@ def proyecto_detail(request, pk, empresa_codigo=None):
     costos_totales = proyecto.calcular_costos_totales()
     total_planillas = sum(p.monto_total for p in proyecto.planillas.all())
     total_gastos = sum(g.monto for g in proyecto.gastos.all())
+    total_maquinaria = proyecto.calcular_costo_maquinaria()
 
     # Cálculos de ingresos
     monto_contrato_original = proyecto.monto_contrato
@@ -219,6 +220,7 @@ def proyecto_detail(request, pk, empresa_codigo=None):
         'costos_totales': costos_totales,
         'total_planillas': total_planillas,
         'total_gastos': total_gastos,
+        'total_maquinaria': total_maquinaria,
         'monto_contrato_original': monto_contrato_original,
         'total_ordenes_cambio': total_ordenes_cambio,
         'monto_total_proyecto': monto_total_proyecto,
@@ -229,6 +231,7 @@ def proyecto_detail(request, pk, empresa_codigo=None):
         'margen_utilidad': margen_utilidad,
         'desembolsos': desembolsos,
         'ordenes_cambio': ordenes_cambio,
+        'empresa_codigo': empresa_codigo,
     })
 
 
@@ -329,6 +332,11 @@ def planillas_list(request, empresa_codigo=None):
 
 @login_required
 def gastos_list(request, empresa_codigo=None):
+    # Verificar permisos: solo admin, gerente y operador
+    if not (request.user.is_superuser or request.user.rol in ['gerente', 'operador']):
+        messages.error(request, 'No tienes permisos para acceder al módulo de gastos.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
     empresa = get_empresa_from_request(request)
 
     # Filtrar gastos por empresa (a través de proyecto)
@@ -592,7 +600,7 @@ def empleado_create(request, empresa_codigo=None):
     empresa = get_empresa_from_request(request)
 
     if request.method == 'POST':
-        form = EmpleadoForm(request.POST)
+        form = EmpleadoForm(request.POST, empresa=empresa)
         if form.is_valid():
             empleado = form.save(commit=False)
             empleado.empresa = empresa  # Asignar empresa automáticamente
@@ -600,22 +608,30 @@ def empleado_create(request, empresa_codigo=None):
             messages.success(request, 'Empleado creado exitosamente.')
             return redirect('empleados_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
-        form = EmpleadoForm()
-    return render(request, 'proyectos/empleado_form.html', {'form': form})
+        form = EmpleadoForm(empresa=empresa)
+    return render(request, 'proyectos/empleado_form.html', {
+        'form': form,
+        'empresa_codigo': empresa_codigo
+    })
 
 
 @login_required
 def empleado_update(request, pk, empresa_codigo=None):
+    empresa = get_empresa_from_request(request)
     empleado = get_object_or_404(Empleado, pk=pk)
     if request.method == 'POST':
-        form = EmpleadoForm(request.POST, instance=empleado)
+        form = EmpleadoForm(request.POST, instance=empleado, empresa=empresa)
         if form.is_valid():
             form.save()
             messages.success(request, 'Empleado actualizado exitosamente.')
             return redirect('empleados_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
     else:
-        form = EmpleadoForm(instance=empleado)
-    return render(request, 'proyectos/empleado_form.html', {'form': form, 'object': empleado})
+        form = EmpleadoForm(instance=empleado, empresa=empresa)
+    return render(request, 'proyectos/empleado_form.html', {
+        'form': form,
+        'object': empleado,
+        'empresa_codigo': empresa_codigo
+    })
 
 
 @login_required
@@ -702,6 +718,11 @@ def asignacion_delete(request, pk, empresa_codigo=None):
 
 @login_required
 def gasto_create(request, empresa_codigo=None):
+    # Verificar permisos: solo admin, gerente y operador
+    if not (request.user.is_superuser or request.user.rol in ['gerente', 'operador']):
+        messages.error(request, 'No tienes permisos para acceder al módulo de gastos.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
     empresa = get_empresa_from_request(request)
 
     if request.method == 'POST':
@@ -723,6 +744,11 @@ def gasto_create(request, empresa_codigo=None):
 
 @login_required
 def gasto_update(request, pk, empresa_codigo=None):
+    # Verificar permisos: solo admin, gerente y operador
+    if not (request.user.is_superuser or request.user.rol in ['gerente', 'operador']):
+        messages.error(request, 'No tienes permisos para acceder al módulo de gastos.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
     empresa = get_empresa_from_request(request)
     gasto = get_object_or_404(Gasto, pk=pk)
 
@@ -746,6 +772,11 @@ def gasto_update(request, pk, empresa_codigo=None):
 
 @login_required
 def gasto_delete(request, pk, empresa_codigo=None):
+    # Verificar permisos: solo admin, gerente y operador
+    if not (request.user.is_superuser or request.user.rol in ['gerente', 'operador']):
+        messages.error(request, 'No tienes permisos para acceder al módulo de gastos.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
     gasto = get_object_or_404(Gasto, pk=pk)
     if request.method == 'POST':
         gasto.delete()
@@ -1540,5 +1571,353 @@ def empresa_delete(request, pk, empresa_codigo=None):
         return redirect('empresas_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
 
     return render(request, 'proyectos/confirm_delete.html', {'object': empresa, 'tipo': 'empresa'})
+
+
+# ====== VISTAS DE MAQUINARIA ======
+
+@login_required
+def maquinarias_list(request, empresa_codigo=None):
+    """Lista de maquinarias"""
+    # Verificar permisos: solo admin, gerente y operador
+    if not (request.user.is_superuser or request.user.rol in ['gerente', 'operador']):
+        messages.error(request, 'No tienes permisos para acceder al módulo de maquinaria.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    empresa = get_empresa_from_request(request)
+    from .models import Maquinaria
+
+    # Filtrar maquinarias por empresa
+    maquinarias = Maquinaria.objects.filter(empresa=empresa).order_by('codigo')
+
+    # Filtros opcionales
+    tipo = request.GET.get('tipo')
+    estado = request.GET.get('estado')
+
+    if tipo:
+        maquinarias = maquinarias.filter(tipo=tipo)
+    if estado:
+        maquinarias = maquinarias.filter(estado=estado)
+
+    return render(request, 'proyectos/maquinarias_list.html', {
+        'maquinarias': maquinarias,
+        'empresa_codigo': empresa_codigo,
+        'filtro_tipo': tipo,
+        'filtro_estado': estado,
+        'tipos': Maquinaria.TIPO_CHOICES,
+        'estados': Maquinaria.ESTADO_CHOICES,
+    })
+
+
+@login_required
+def maquinaria_create(request, empresa_codigo=None):
+    """Crear nueva maquinaria"""
+    # Verificar permisos: solo admin, gerente y operador
+    if not (request.user.is_superuser or request.user.rol in ['gerente', 'operador']):
+        messages.error(request, 'No tienes permisos para acceder al módulo de maquinaria.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    empresa = get_empresa_from_request(request)
+    from .forms import MaquinariaForm
+
+    if request.method == 'POST':
+        form = MaquinariaForm(request.POST)
+        if form.is_valid():
+            maquinaria = form.save(commit=False)
+            maquinaria.empresa = empresa
+            maquinaria.save()
+            messages.success(request, 'Maquinaria creada exitosamente.')
+            return redirect('maquinarias_list', empresa_codigo=empresa.codigo if empresa else 'default')
+    else:
+        form = MaquinariaForm()
+
+    return render(request, 'proyectos/maquinaria_form.html', {
+        'form': form,
+        'empresa_codigo': empresa_codigo
+    })
+
+
+@login_required
+def maquinaria_update(request, pk, empresa_codigo=None):
+    """Actualizar maquinaria"""
+    # Verificar permisos: solo admin, gerente y operador
+    if not (request.user.is_superuser or request.user.rol in ['gerente', 'operador']):
+        messages.error(request, 'No tienes permisos para acceder al módulo de maquinaria.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    empresa = get_empresa_from_request(request)
+    from .models import Maquinaria
+    from .forms import MaquinariaForm
+
+    maquinaria = get_object_or_404(Maquinaria, pk=pk)
+
+    if request.method == 'POST':
+        form = MaquinariaForm(request.POST, instance=maquinaria)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Maquinaria actualizada exitosamente.')
+            return redirect('maquinarias_list', empresa_codigo=empresa.codigo if empresa else 'default')
+    else:
+        form = MaquinariaForm(instance=maquinaria)
+
+    return render(request, 'proyectos/maquinaria_form.html', {
+        'form': form,
+        'object': maquinaria,
+        'empresa_codigo': empresa_codigo
+    })
+
+
+@login_required
+def maquinaria_delete(request, pk, empresa_codigo=None):
+    """Eliminar maquinaria"""
+    # Verificar permisos: solo admin, gerente y operador
+    if not (request.user.is_superuser or request.user.rol in ['gerente', 'operador']):
+        messages.error(request, 'No tienes permisos para acceder al módulo de maquinaria.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    from .models import Maquinaria
+
+    maquinaria = get_object_or_404(Maquinaria, pk=pk)
+
+    if request.method == 'POST':
+        maquinaria.delete()
+        messages.success(request, 'Maquinaria eliminada exitosamente.')
+        return redirect('maquinarias_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    return render(request, 'proyectos/confirm_delete.html', {
+        'object': maquinaria,
+        'tipo': 'maquinaria'
+    })
+
+
+# ====== VISTAS DE USO DE MAQUINARIA ======
+
+@login_required
+def usos_maquinaria_list(request, empresa_codigo=None):
+    """Lista de usos de maquinaria"""
+    # Verificar permisos: solo admin, gerente y operador
+    if not (request.user.is_superuser or request.user.rol in ['gerente', 'operador']):
+        messages.error(request, 'No tienes permisos para acceder al módulo de maquinaria.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    empresa = get_empresa_from_request(request)
+    from .models import UsoMaquinaria
+
+    # Filtrar por empresa a través del proyecto
+    usos = UsoMaquinaria.objects.filter(proyecto__empresa=empresa).select_related(
+        'proyecto', 'maquinaria'
+    ).order_by('-fecha_inicio')
+
+    # Filtros opcionales
+    proyecto_id = request.GET.get('proyecto')
+    maquinaria_id = request.GET.get('maquinaria')
+    estado = request.GET.get('estado')
+
+    if proyecto_id:
+        usos = usos.filter(proyecto_id=proyecto_id)
+    if maquinaria_id:
+        usos = usos.filter(maquinaria_id=maquinaria_id)
+
+    # Filtro por estado
+    if estado == 'activo':
+        # En uso: no tiene fecha_fin O no tiene horometro_final
+        from django.db.models import Q
+        usos = usos.filter(Q(fecha_fin__isnull=True) | Q(horometro_final__isnull=True))
+    elif estado == 'finalizado':
+        # Finalizados: tiene ambos fecha_fin Y horometro_final
+        usos = usos.filter(fecha_fin__isnull=False, horometro_final__isnull=False)
+
+    # Obtener proyectos y maquinarias para los filtros
+    from .models import Proyecto, Maquinaria
+    proyectos = Proyecto.objects.filter(empresa=empresa).order_by('nombre')
+    maquinarias = Maquinaria.objects.filter(empresa=empresa).order_by('codigo')
+
+    return render(request, 'proyectos/usos_maquinaria_list.html', {
+        'usos': usos,
+        'empresa_codigo': empresa_codigo,
+        'proyectos': proyectos,
+        'maquinarias': maquinarias,
+        'filtro_proyecto': proyecto_id,
+        'filtro_maquinaria': maquinaria_id,
+        'filtro_estado': estado,
+    })
+
+
+@login_required
+def uso_maquinaria_create(request, empresa_codigo=None):
+    """Registrar nuevo uso de maquinaria"""
+    # Verificar permisos: solo admin, gerente y operador
+    if not (request.user.is_superuser or request.user.rol in ['gerente', 'operador']):
+        messages.error(request, 'No tienes permisos para acceder al módulo de maquinaria.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    empresa = get_empresa_from_request(request)
+    from .forms import UsoMaquinariaForm
+    from django.core.exceptions import ValidationError
+
+    if request.method == 'POST':
+        form = UsoMaquinariaForm(request.POST, empresa=empresa)
+        if form.is_valid():
+            try:
+                uso = form.save(commit=False)
+                uso.full_clean()  # Llamar validaciones del modelo
+                uso.save()
+                messages.success(request, 'Uso de maquinaria registrado exitosamente.')
+                return redirect('usos_maquinaria_list', empresa_codigo=empresa.codigo if empresa else 'default')
+            except ValidationError as e:
+                # Agregar errores de validación del modelo al formulario
+                for field, errors in e.message_dict.items():
+                    for error in errors:
+                        form.add_error(field, error)
+    else:
+        # Pre-seleccionar proyecto si viene en la URL
+        initial = {}
+        proyecto_id = request.GET.get('proyecto')
+        if proyecto_id:
+            initial['proyecto'] = proyecto_id
+
+        form = UsoMaquinariaForm(initial=initial, empresa=empresa)
+
+    return render(request, 'proyectos/uso_maquinaria_form.html', {
+        'form': form,
+        'empresa_codigo': empresa_codigo
+    })
+
+
+@login_required
+def uso_maquinaria_update(request, pk, empresa_codigo=None):
+    """Actualizar uso de maquinaria"""
+    # Verificar permisos: solo admin, gerente y operador
+    if not (request.user.is_superuser or request.user.rol in ['gerente', 'operador']):
+        messages.error(request, 'No tienes permisos para acceder al módulo de maquinaria.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    empresa = get_empresa_from_request(request)
+    from .models import UsoMaquinaria
+    from .forms import UsoMaquinariaForm
+    from django.core.exceptions import ValidationError
+
+    uso = get_object_or_404(UsoMaquinaria, pk=pk)
+
+    # Verificar si el uso está finalizado y el usuario NO es admin
+    if uso.fecha_fin and uso.horometro_final and not request.user.is_superuser:
+        messages.error(request, 'No puedes editar un uso de maquinaria finalizado. Solo los administradores pueden hacerlo.')
+        return redirect('usos_maquinaria_list', empresa_codigo=empresa.codigo if empresa else 'default')
+
+    if request.method == 'POST':
+        form = UsoMaquinariaForm(request.POST, instance=uso, empresa=empresa)
+        if form.is_valid():
+            try:
+                uso = form.save(commit=False)
+                uso.full_clean()  # Llamar validaciones del modelo
+                uso.save()
+                messages.success(request, 'Uso de maquinaria actualizado exitosamente.')
+                return redirect('usos_maquinaria_list', empresa_codigo=empresa.codigo if empresa else 'default')
+            except ValidationError as e:
+                # Agregar errores de validación del modelo al formulario
+                for field, errors in e.message_dict.items():
+                    for error in errors:
+                        form.add_error(field, error)
+    else:
+        form = UsoMaquinariaForm(instance=uso, empresa=empresa)
+
+    return render(request, 'proyectos/uso_maquinaria_form.html', {
+        'form': form,
+        'object': uso,
+        'empresa_codigo': empresa_codigo
+    })
+
+
+@login_required
+def uso_maquinaria_delete(request, pk, empresa_codigo=None):
+    """Eliminar uso de maquinaria"""
+    # Verificar permisos: solo admin, gerente y operador
+    if not (request.user.is_superuser or request.user.rol in ['gerente', 'operador']):
+        messages.error(request, 'No tienes permisos para acceder al módulo de maquinaria.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    from .models import UsoMaquinaria
+
+    uso = get_object_or_404(UsoMaquinaria, pk=pk)
+
+    # Verificar si el uso está finalizado y el usuario NO es admin
+    if uso.fecha_fin and uso.horometro_final and not request.user.is_superuser:
+        messages.error(request, 'No puedes eliminar un uso de maquinaria finalizado. Solo los administradores pueden hacerlo.')
+        return redirect('usos_maquinaria_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    if request.method == 'POST':
+        uso.delete()
+        messages.success(request, 'Uso de maquinaria eliminado exitosamente.')
+        return redirect('usos_maquinaria_list', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    return render(request, 'proyectos/confirm_delete.html', {
+        'object': uso,
+        'tipo': 'uso de maquinaria'
+    })
+
+
+@login_required
+def maquinaria_historial_tarifas(request, pk, empresa_codigo=None):
+    """Ver historial de cambios de tarifa de una maquinaria"""
+    # Verificar permisos: solo admin, gerente y operador
+    if not (request.user.is_superuser or request.user.rol in ['gerente', 'operador']):
+        messages.error(request, 'No tienes permisos para acceder al módulo de maquinaria.')
+        return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
+
+    from .models import Maquinaria, HistorialTarifaMaquinaria
+
+    maquinaria = get_object_or_404(Maquinaria, pk=pk)
+    historial = HistorialTarifaMaquinaria.objects.filter(maquinaria=maquinaria).order_by('-fecha_cambio')
+
+    return render(request, 'proyectos/maquinaria_historial_tarifas.html', {
+        'maquinaria': maquinaria,
+        'historial': historial,
+        'empresa_codigo': empresa_codigo
+    })
+
+
+from django.http import JsonResponse
+
+@login_required
+def get_maquinaria_datos(request, pk, empresa_codigo=None):
+    """Endpoint AJAX para obtener datos de una maquinaria"""
+    # Verificar permisos: solo admin, gerente y operador
+    if not (request.user.is_superuser or request.user.rol in ['gerente', 'operador']):
+        return JsonResponse({'error': 'No tienes permisos para acceder al módulo de maquinaria.'}, status=403)
+
+    from .models import Maquinaria, UsoMaquinaria
+
+    try:
+        maquinaria = Maquinaria.objects.get(pk=pk)
+
+        # Obtener el ID del uso actual (si se está editando)
+        uso_actual_id = request.GET.get('uso_id', None)
+
+        # Obtener el último horómetro final registrado, excluyendo el uso actual si existe
+        query = UsoMaquinaria.objects.filter(
+            maquinaria=maquinaria
+        ).exclude(horometro_final__isnull=True)
+
+        # Si estamos editando, excluir el uso actual
+        if uso_actual_id:
+            query = query.exclude(pk=uso_actual_id)
+
+        ultimo_uso = query.order_by('-horometro_final').first()
+
+        horometro_minimo = maquinaria.horometro_actual
+        if ultimo_uso and ultimo_uso.horometro_final:
+            horometro_minimo = max(horometro_minimo, ultimo_uso.horometro_final)
+
+        return JsonResponse({
+            'success': True,
+            'tarifa_hora': str(maquinaria.tarifa_hora),
+            'horometro_actual': str(maquinaria.horometro_actual),
+            'horometro_minimo': str(horometro_minimo),
+            'ultimo_horometro_final': str(ultimo_uso.horometro_final) if ultimo_uso and ultimo_uso.horometro_final else None
+        })
+    except Maquinaria.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Maquinaria no encontrada'
+        }, status=404)
 
 

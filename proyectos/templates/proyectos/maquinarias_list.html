@@ -1,0 +1,137 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}Maquinarias - MultiProject Pro{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="bi bi-truck"></i> Catálogo de Maquinaria</h2>
+        <p class="text-muted">Gestión de equipos y maquinaria pesada</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'maquinaria_create' empresa_codigo %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Nueva Maquinaria
+        </a>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Tipo de Maquinaria</label>
+                <select name="tipo" class="form-select">
+                    <option value="">Todos los tipos</option>
+                    {% for tipo_val, tipo_label in tipos %}
+                        <option value="{{ tipo_val }}" {% if filtro_tipo == tipo_val %}selected{% endif %}>
+                            {{ tipo_label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Estado</label>
+                <select name="estado" class="form-select">
+                    <option value="">Todos los estados</option>
+                    {% for estado_val, estado_label in estados %}
+                        <option value="{{ estado_val }}" {% if filtro_estado == estado_val %}selected{% endif %}>
+                            {{ estado_label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-funnel"></i> Filtrar
+                </button>
+                <a href="{% url 'maquinarias_list' empresa_codigo %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de Maquinarias -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Listado de Maquinarias</h5>
+    </div>
+    <div class="card-body">
+        {% if maquinarias %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Tipo</th>
+                        <th>Marca/Modelo</th>
+                        <th>Horómetro</th>
+                        <th>Tarifa/Hora</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for maquinaria in maquinarias %}
+                    <tr>
+                        <td><strong>{{ maquinaria.codigo }}</strong></td>
+                        <td>{{ maquinaria.nombre }}</td>
+                        <td>
+                            <span class="badge bg-secondary">
+                                {{ maquinaria.get_tipo_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if maquinaria.marca %}
+                                {{ maquinaria.marca }}
+                                {% if maquinaria.modelo %}{{ maquinaria.modelo }}{% endif %}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <i class="bi bi-clock"></i> {{ maquinaria.horometro_actual }} hrs
+                        </td>
+                        <td>L. {{ maquinaria.tarifa_hora|floatformat:2 }}</td>
+                        <td>
+                            {% if maquinaria.estado == 'disponible' %}
+                                <span class="badge bg-success">{{ maquinaria.get_estado_display }}</span>
+                            {% elif maquinaria.estado == 'en_uso' %}
+                                <span class="badge bg-primary">{{ maquinaria.get_estado_display }}</span>
+                            {% elif maquinaria.estado == 'mantenimiento' %}
+                                <span class="badge bg-warning">{{ maquinaria.get_estado_display }}</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ maquinaria.get_estado_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-actions">
+                            <a href="{% url 'maquinaria_historial_tarifas' empresa_codigo maquinaria.pk %}"
+                               class="btn btn-sm btn-outline-info" title="Historial de Tarifas">
+                                <i class="bi bi-clock-history"></i>
+                            </a>
+                            <a href="{% url 'maquinaria_update' empresa_codigo maquinaria.pk %}"
+                               class="btn btn-sm btn-outline-primary" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'maquinaria_delete' empresa_codigo maquinaria.pk %}"
+                               class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            No hay maquinarias registradas. <a href="{% url 'maquinaria_create' empresa_codigo %}">Crear la primera maquinaria</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

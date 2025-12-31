@@ -220,10 +220,15 @@ class Proyecto(models.Model):
         return f"{self.codigo} - {self.nombre}"
 
     def calcular_costos_totales(self):
-        """Calcula el total de costos del proyecto (planilla + gastos)"""
+        """Calcula el total de costos del proyecto (planilla + gastos + maquinaria)"""
         total_planilla = sum(p.monto_total for p in self.planillas.all())
         total_gastos = sum(g.monto for g in self.gastos.all())
-        return total_planilla + total_gastos
+        total_maquinaria = sum(uso.costo_total for uso in self.usos_maquinaria.all())
+        return total_planilla + total_gastos + total_maquinaria
+
+    def calcular_costo_maquinaria(self):
+        """Calcula el total de costos de maquinaria del proyecto"""
+        return sum(uso.costo_total for uso in self.usos_maquinaria.all())
 
     def calcular_utilidad_bruta(self):
         """Calcula la utilidad bruta (monto contrato - costos totales)"""
@@ -512,6 +517,7 @@ class Usuario(AbstractUser):
     - Supervisor: Gestión de proyectos, empleados, planillas y gastos
     - Contador: Acceso a información financiera, planillas y gastos
     - Auxiliar: Gestión de asignaciones y consulta de proyectos
+    - Operador: Acceso a gastos y maquinaria
     - Usuario: Solo lectura de proyectos y reportes
 
     Nota: El superusuario (is_superuser=True) tiene acceso completo al sistema incluyendo Django Admin
@@ -522,6 +528,7 @@ class Usuario(AbstractUser):
         ('supervisor', 'Supervisor'),
         ('contador', 'Contador'),
         ('auxiliar', 'Auxiliar'),
+        ('operador', 'Operador'),
         ('usuario', 'Usuario'),
     ]
 
@@ -571,6 +578,7 @@ class Usuario(AbstractUser):
             'supervisor': 'Supervisores',
             'contador': 'Contadores',
             'auxiliar': 'Auxiliares',
+            'operador': 'Operadores',
             'usuario': 'Usuarios',
         }
         return group_mapping.get(self.rol, 'Usuarios')
@@ -778,3 +786,329 @@ class HistorialSalario(models.Model):
         verbose_name = 'Historial de Salario'
         verbose_name_plural = 'Historial de Salarios'
         ordering = ['-fecha_cambio']
+
+
+# ====== MODELOS DE MAQUINARIA ======
+
+class Maquinaria(models.Model):
+    """Catálogo de maquinaria disponible para usar en proyectos"""
+    TIPO_CHOICES = [
+        ('retroexcavadora', 'Retroexcavadora'),
+        ('excavadora', 'Excavadora'),
+        ('bulldozer', 'Bulldozer'),
+        ('camion', 'Camión'),
+        ('grua', 'Grúa'),
+        ('compactadora', 'Compactadora'),
+        ('motoniveladora', 'Motoniveladora'),
+        ('cargador', 'Cargador Frontal'),
+        ('vibrador', 'Vibrador'),
+        ('otro', 'Otro'),
+    ]
+
+    ESTADO_CHOICES = [
+        ('disponible', 'Disponible'),
+        ('en_uso', 'En Uso'),
+        ('mantenimiento', 'Mantenimiento'),
+        ('fuera_servicio', 'Fuera de Servicio'),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='maquinarias', verbose_name='Empresa')
+    codigo = models.CharField(max_length=20, verbose_name='Código')
+    nombre = models.CharField(max_length=200, verbose_name='Nombre/Descripción')
+    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES, verbose_name='Tipo de Maquinaria')
+    marca = models.CharField(max_length=100, blank=True, null=True, verbose_name='Marca')
+    modelo = models.CharField(max_length=100, blank=True, null=True, verbose_name='Modelo')
+    placa = models.CharField(max_length=20, blank=True, null=True, verbose_name='Placa/Matrícula')
+
+    # Horómetro
+    horometro_actual = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name='Horómetro Actual (horas)',
+        help_text='Horas acumuladas de uso de la maquinaria'
+    )
+
+    # Tarifas
+    tarifa_hora = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name='Tarifa por Hora',
+        help_text='Costo por hora de uso'
+    )
+
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='disponible', verbose_name='Estado')
+    activo = models.BooleanField(default=True, verbose_name='Activo')
+    observaciones = models.TextField(blank=True, null=True, verbose_name='Observaciones')
+
+    fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Creación')
+    fecha_modificacion = models.DateTimeField(auto_now=True, verbose_name='Última Modificación')
+
+    class Meta:
+        verbose_name = 'Maquinaria'
+        verbose_name_plural = 'Maquinarias'
+        ordering = ['codigo']
+        unique_together = ['empresa', 'codigo']
+
+    def __str__(self):
+        return f"{self.codigo} - {self.nombre}"
+
+
+class UsoMaquinaria(models.Model):
+    """Registro de uso de maquinaria en un proyecto"""
+    proyecto = models.ForeignKey(
+        Proyecto,
+        on_delete=models.CASCADE,
+        related_name='usos_maquinaria',
+        verbose_name='Proyecto'
+    )
+    maquinaria = models.ForeignKey(
+        Maquinaria,
+        on_delete=models.PROTECT,
+        related_name='usos',
+        verbose_name='Maquinaria'
+    )
+
+    # Registro de horómetros
+    fecha_inicio = models.DateField(verbose_name='Fecha de Inicio')
+    fecha_fin = models.DateField(blank=True, null=True, verbose_name='Fecha de Fin')
+
+    horometro_inicial = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name='Horómetro Inicial',
+        help_text='Lectura del horómetro al iniciar'
+    )
+    horometro_final = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name='Horómetro Final',
+        help_text='Lectura del horómetro al finalizar'
+    )
+
+    # Tarifa aplicada (puede ser diferente a la tarifa actual)
+    tarifa_aplicada = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name='Tarifa Aplicada (por hora)'
+    )
+
+    # Operador (opcional) - Usuario con rol operador que opera la maquinaria
+    operador = models.ForeignKey(
+        'Usuario',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={'rol': 'operador'},
+        related_name='usos_maquinaria_operados',
+        verbose_name='Operador'
+    )
+
+    descripcion_trabajo = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Descripción del Trabajo Realizado'
+    )
+    observaciones = models.TextField(blank=True, null=True, verbose_name='Observaciones')
+
+    fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Creación')
+    fecha_modificacion = models.DateTimeField(auto_now=True, verbose_name='Última Modificación')
+
+    class Meta:
+        verbose_name = 'Uso de Maquinaria'
+        verbose_name_plural = 'Usos de Maquinaria'
+        ordering = ['-fecha_inicio']
+
+    def __str__(self):
+        return f"{self.maquinaria.codigo} - {self.proyecto.codigo} ({self.fecha_inicio})"
+
+    @property
+    def horas_trabajadas(self):
+        """Calcula las horas trabajadas"""
+        if self.horometro_final and self.horometro_inicial:
+            return self.horometro_final - self.horometro_inicial
+        return Decimal('0.00')
+
+    @property
+    def costo_total(self):
+        """Calcula el costo total del uso"""
+        return self.horas_trabajadas * self.tarifa_aplicada
+
+    def save(self, *args, **kwargs):
+        # Auto-asignar tarifa si no se especificó
+        if not self.tarifa_aplicada:
+            self.tarifa_aplicada = self.maquinaria.tarifa_hora
+
+        # Gestión automática del estado de la maquinaria
+        is_new = self.pk is None
+
+        if is_new:
+            # Si es un nuevo uso, marcar la maquinaria como "en_uso"
+            self.maquinaria.estado = 'en_uso'
+            self.maquinaria.save(update_fields=['estado'])
+
+        # Si el uso se finaliza (tiene fecha_fin y horometro_final)
+        if self.fecha_fin and self.horometro_final:
+            # Actualizar horómetro de la maquinaria
+            self.maquinaria.horometro_actual = self.horometro_final
+            # Marcar como disponible si no hay otros usos activos
+            otros_usos_activos = UsoMaquinaria.objects.filter(
+                maquinaria=self.maquinaria,
+                fecha_fin__isnull=True
+            ).exclude(pk=self.pk).exists()
+
+            if not otros_usos_activos:
+                self.maquinaria.estado = 'disponible'
+
+            self.maquinaria.save(update_fields=['horometro_actual', 'estado'])
+
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        # Validar que horómetro final sea mayor que inicial
+        if self.horometro_final and self.horometro_inicial:
+            if self.horometro_final <= self.horometro_inicial:
+                raise ValidationError({
+                    'horometro_final': 'El horómetro final debe ser mayor al inicial'
+                })
+
+        # Si estamos editando (self.pk existe)
+        if self.pk:
+            # Obtener el objeto original de la base de datos
+            try:
+                original = UsoMaquinaria.objects.get(pk=self.pk)
+
+                # Si el uso ya está finalizado, NO permitir edición
+                if original.fecha_fin and original.horometro_final:
+                    raise ValidationError(
+                        'No se puede editar un uso de maquinaria que ya está finalizado. '
+                        'El uso fue completado y cerrado.'
+                    )
+            except UsoMaquinaria.DoesNotExist:
+                pass
+
+            # Validar que no afecte registros posteriores
+            if self.horometro_final:
+                usos_posteriores = UsoMaquinaria.objects.filter(
+                    maquinaria=self.maquinaria,
+                    fecha_inicio__gt=self.fecha_inicio
+                ).exclude(pk=self.pk).order_by('fecha_inicio').first()
+
+                if usos_posteriores:
+                    # Validar que nuestro horómetro final no sea mayor al inicial del siguiente
+                    if self.horometro_final > usos_posteriores.horometro_inicial:
+                        raise ValidationError({
+                            'horometro_final': f'El horómetro final no puede ser mayor a {usos_posteriores.horometro_inicial} hrs (horómetro inicial del uso posterior del {usos_posteriores.fecha_inicio.strftime("%d/%m/%Y")})'
+                        })
+
+        # Solo validar horómetro inicial y estado de maquinaria en creación (no en edición)
+        if not self.pk:
+            # Validar que la maquinaria no esté en uso
+            if self.maquinaria.estado == 'en_uso':
+                # Buscar el uso activo
+                uso_activo = UsoMaquinaria.objects.filter(
+                    maquinaria=self.maquinaria,
+                    fecha_fin__isnull=True
+                ).first()
+
+                if uso_activo:
+                    raise ValidationError({
+                        'maquinaria': f'La maquinaria está actualmente en uso en el proyecto "{uso_activo.proyecto.nombre}" desde el {uso_activo.fecha_inicio.strftime("%d/%m/%Y")}. Debe finalizar ese uso antes de crear uno nuevo.'
+                    })
+
+            # Validar que la maquinaria no esté en mantenimiento o fuera de servicio
+            if self.maquinaria.estado == 'mantenimiento':
+                raise ValidationError({
+                    'maquinaria': 'La maquinaria está en mantenimiento y no puede ser utilizada.'
+                })
+            elif self.maquinaria.estado == 'fuera_servicio':
+                raise ValidationError({
+                    'maquinaria': 'La maquinaria está fuera de servicio y no puede ser utilizada.'
+                })
+            # Determinar el horómetro mínimo permitido
+            horometro_minimo = self.maquinaria.horometro_actual
+
+            # Validar que el horómetro inicial no sea menor al último horómetro final registrado
+            ultimo_uso = UsoMaquinaria.objects.filter(
+                maquinaria=self.maquinaria
+            ).exclude(pk=self.pk).order_by('-horometro_final').first()
+
+            if ultimo_uso and ultimo_uso.horometro_final:
+                # El mínimo es el mayor entre el horómetro actual y el último horómetro final
+                horometro_minimo = max(horometro_minimo, ultimo_uso.horometro_final)
+
+            # Validar que el horómetro inicial sea mayor o igual al mínimo
+            if self.horometro_inicial < horometro_minimo:
+                if ultimo_uso and ultimo_uso.horometro_final:
+                    raise ValidationError({
+                        'horometro_inicial': f'El horómetro inicial no puede ser menor al último horómetro final registrado ({ultimo_uso.horometro_final} hrs)'
+                    })
+                else:
+                    raise ValidationError({
+                        'horometro_inicial': f'El horómetro inicial no puede ser menor al horómetro actual de la maquinaria ({self.maquinaria.horometro_actual} hrs)'
+                    })
+
+
+class HistorialTarifaMaquinaria(models.Model):
+    """
+    Historial de cambios en la tarifa de maquinaria.
+    Se crea automáticamente cuando se modifica la tarifa_hora.
+    """
+    maquinaria = models.ForeignKey(
+        Maquinaria,
+        on_delete=models.CASCADE,
+        related_name='historial_tarifas',
+        verbose_name='Maquinaria'
+    )
+    tarifa_anterior = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name='Tarifa Anterior',
+        null=True,
+        blank=True
+    )
+    tarifa_nueva = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name='Tarifa Nueva'
+    )
+    fecha_cambio = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Fecha del Cambio'
+    )
+    usuario = models.ForeignKey(
+        'Usuario',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='cambios_tarifa_maquinaria',
+        verbose_name='Usuario que Realizó el Cambio'
+    )
+    motivo = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name='Motivo del Cambio',
+        help_text='Ej: Ajuste por inflación, Cambio de mercado, etc.'
+    )
+
+    class Meta:
+        verbose_name = 'Historial de Tarifa de Maquinaria'
+        verbose_name_plural = 'Historial de Tarifas de Maquinaria'
+        ordering = ['-fecha_cambio']
+
+    def __str__(self):
+        if self.tarifa_anterior:
+            return f"{self.maquinaria.codigo}: L.{self.tarifa_anterior} → L.{self.tarifa_nueva} ({self.fecha_cambio.strftime('%d/%m/%Y')})"
+        else:
+            return f"{self.maquinaria.codigo}: Tarifa inicial L.{self.tarifa_nueva} ({self.fecha_cambio.strftime('%d/%m/%Y')})"

@@ -1,0 +1,233 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}Usos de Maquinaria - MultiProject Pro{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="bi bi-clock-history"></i> Registro de Usos de Maquinaria</h2>
+        <p class="text-muted">Control de horometros y costos por proyecto</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'uso_maquinaria_create' empresa_codigo %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Registrar Uso
+        </a>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Proyecto</label>
+                <select name="proyecto" class="form-select">
+                    <option value="">Todos los proyectos</option>
+                    {% for proyecto in proyectos %}
+                        <option value="{{ proyecto.id }}" {% if filtro_proyecto == proyecto.id|stringformat:"s" %}selected{% endif %}>
+                            {{ proyecto.codigo }} - {{ proyecto.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Maquinaria</label>
+                <select name="maquinaria" class="form-select">
+                    <option value="">Todas las maquinarias</option>
+                    {% for maquinaria in maquinarias %}
+                        <option value="{{ maquinaria.id }}" {% if filtro_maquinaria == maquinaria.id|stringformat:"s" %}selected{% endif %}>
+                            {{ maquinaria.codigo }} - {{ maquinaria.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Estado</label>
+                <select name="estado" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="activo" {% if filtro_estado == 'activo' %}selected{% endif %}>En Uso</option>
+                    <option value="finalizado" {% if filtro_estado == 'finalizado' %}selected{% endif %}>Finalizados</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-funnel"></i> Filtrar
+                </button>
+                <a href="{% url 'usos_maquinaria_list' empresa_codigo %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de Usos -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Listado de Usos de Maquinaria</h5>
+    </div>
+    <div class="card-body">
+        {% if usos %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Proyecto</th>
+                        <th>Maquinaria</th>
+                        <th>Horómetro Inicial</th>
+                        <th>Horómetro Final</th>
+                        <th>Horas</th>
+                        <th>Tarifa</th>
+                        <th>Costo Total</th>
+                        <th>Operador</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for uso in usos %}
+                    <tr>
+                        <td>
+                            <strong>{{ uso.fecha_inicio|date:"d/m/Y" }}</strong>
+                            {% if uso.fecha_fin %}
+                                <br><small class="text-muted">al {{ uso.fecha_fin|date:"d/m/Y" }}</small>
+                            {% else %}
+                                <br><span class="badge bg-warning">En uso</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ uso.proyecto.codigo }}</strong><br>
+                            <small class="text-muted">{{ uso.proyecto.nombre|truncatechars:30 }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ uso.maquinaria.codigo }}</strong><br>
+                            <small class="text-muted">{{ uso.maquinaria.nombre|truncatechars:25 }}</small>
+                        </td>
+                        <td>{{ uso.horometro_inicial }} hrs</td>
+                        <td>
+                            {% if uso.horometro_final %}
+                                {{ uso.horometro_final }} hrs
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if uso.horas_trabajadas > 0 %}
+                                <span class="badge bg-info">{{ uso.horas_trabajadas }} hrs</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>L. {{ uso.tarifa_aplicada|floatformat:2 }}/hr</td>
+                        <td>
+                            {% if uso.costo_total > 0 %}
+                                <strong class="text-primary">L. {{ uso.costo_total|floatformat:2 }}</strong>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if uso.operador %}
+                                {{ uso.operador.username }}
+                                {% if uso.operador.first_name or uso.operador.last_name %}
+                                    <br><small class="text-muted">{{ uso.operador.first_name }} {{ uso.operador.last_name }}</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-actions">
+                            {% if uso.fecha_fin and uso.horometro_final %}
+                                <!-- Uso finalizado -->
+                                <span class="badge bg-success" title="Uso finalizado">
+                                    <i class="bi bi-check-circle"></i> Finalizado
+                                </span>
+                                {% if user.is_superuser %}
+                                    <!-- Solo admin puede editar/eliminar finalizados -->
+                                    <a href="{% url 'uso_maquinaria_update' empresa_codigo uso.pk %}"
+                                       class="btn btn-sm btn-outline-primary" title="Editar (Solo Admin)">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'uso_maquinaria_delete' empresa_codigo uso.pk %}"
+                                       class="btn btn-sm btn-outline-danger" title="Eliminar (Solo Admin)">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                {% endif %}
+                            {% else %}
+                                <!-- Uso activo: todos pueden editar -->
+                                <a href="{% url 'uso_maquinaria_update' empresa_codigo uso.pk %}"
+                                   class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'uso_maquinaria_delete' empresa_codigo uso.pk %}"
+                                   class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if usos %}
+        <div class="mt-3 p-3 bg-light rounded">
+            <div class="row">
+                <div class="col-md-6">
+                    <strong><i class="bi bi-list-check"></i> Total de Registros:</strong> {{ usos|length }}
+                </div>
+                <div class="col-md-6 text-end">
+                    <strong><i class="bi bi-calculator"></i> Costo Total:</strong>
+                    <span class="text-primary fs-5">
+                        L.
+                        {% comment %}Sumar todos los costos{% endcomment %}
+                        {% for uso in usos %}{% endfor %}
+                        <span id="total-display">0.00</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            No hay usos de maquinaria registrados. <a href="{% url 'uso_maquinaria_create' empresa_codigo %}">Registrar el primer uso</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Calcular el total de costos
+document.addEventListener('DOMContentLoaded', function() {
+    const totalDisplay = document.getElementById('total-display');
+    if (totalDisplay) {
+        // Obtener todos los costos de la tabla
+        const rows = document.querySelectorAll('tbody tr');
+        let total = 0;
+
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            // El costo total está en la columna 8 (índice 7)
+            if (cells.length > 7) {
+                const costoCell = cells[7];
+                const costoText = costoCell.textContent.trim();
+                // Extraer el número del texto "L. 1234.56"
+                const match = costoText.match(/L\.\s*([\d,]+\.?\d*)/);
+                if (match) {
+                    const costo = parseFloat(match[1].replace(/,/g, ''));
+                    if (!isNaN(costo)) {
+                        total += costo;
+                    }
+                }
+            }
+        });
+
+        totalDisplay.textContent = total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+});
+</script>
+{% endblock %}

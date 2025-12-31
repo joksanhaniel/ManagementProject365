@@ -93,6 +93,22 @@ urlpatterns = [
     path('pagos/<int:pk>/editar/', views.pago_update, name='pago_update'),
     path('pagos/<int:pk>/eliminar/', views.pago_delete, name='pago_delete'),
 
+    # Maquinarias - CRUD
+    path('maquinarias/', views.maquinarias_list, name='maquinarias_list'),
+    path('maquinarias/nueva/', views.maquinaria_create, name='maquinaria_create'),
+    path('maquinarias/<int:pk>/editar/', views.maquinaria_update, name='maquinaria_update'),
+    path('maquinarias/<int:pk>/eliminar/', views.maquinaria_delete, name='maquinaria_delete'),
+    path('maquinarias/<int:pk>/historial-tarifas/', views.maquinaria_historial_tarifas, name='maquinaria_historial_tarifas'),
+
+    # AJAX endpoints
+    path('api/maquinaria/<int:pk>/datos/', views.get_maquinaria_datos, name='get_maquinaria_datos'),
+
+    # Uso de Maquinaria - CRUD
+    path('usos-maquinaria/', views.usos_maquinaria_list, name='usos_maquinaria_list'),
+    path('usos-maquinaria/nuevo/', views.uso_maquinaria_create, name='uso_maquinaria_create'),
+    path('usos-maquinaria/<int:pk>/editar/', views.uso_maquinaria_update, name='uso_maquinaria_update'),
+    path('usos-maquinaria/<int:pk>/eliminar/', views.uso_maquinaria_delete, name='uso_maquinaria_delete'),
+
     # API REST
     path('api/', include(router.urls)),
 ]

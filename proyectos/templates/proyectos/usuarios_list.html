@@ -91,6 +91,8 @@
                                 <span class="badge bg-success">{{ usuario.get_rol_display }}</span>
                             {% elif usuario.rol == 'auxiliar' %}
                                 <span class="badge bg-info">{{ usuario.get_rol_display }}</span>
+                            {% elif usuario.rol == 'operador' %}
+                                <span class="badge bg-dark">{{ usuario.get_rol_display }}</span>
                             {% else %}
                                 <span class="badge bg-secondary">{{ usuario.get_rol_display }}</span>
                             {% endif %}
@@ -160,7 +162,7 @@
                     <li>Gestionar empleados, asignaciones, planillas y gastos</li>
                     <li>Acceso completo a información financiera</li>
                 </ul>
-                <p class="small mb-3"><strong>Módulos:</strong> Dashboard, Clientes, Proveedores, Empleados, Proyectos, Planillas, Gastos, Usuarios</p>
+                <p class="small mb-3"><strong>Módulos:</strong> Dashboard, Clientes, Proveedores, Empleados, Proyectos, Planillas, Gastos, Maquinaria, Usos de Maquinaria, Usuarios</p>
 
                 <h6><span class="badge bg-warning">Supervisor</span></h6>
                 <ul class="small">
@@ -193,6 +195,16 @@
                     <li>Sin acceso a información financiera</li>
                 </ul>
                 <p class="small mb-3"><strong>Módulos:</strong> Dashboard, Empleados, Proyectos (lectura)</p>
+
+                <h6><span class="badge bg-dark">Operador</span></h6>
+                <ul class="small">
+                    <li>Gestionar gastos del proyecto</li>
+                    <li>Gestionar maquinaria y equipo</li>
+                    <li>Registrar uso de maquinaria</li>
+                    <li>Puede ser asignado como operador en usos</li>
+                    <li>Sin acceso a información financiera ni planillas</li>
+                </ul>
+                <p class="small mb-3"><strong>Módulos:</strong> Dashboard, Gastos, Maquinaria, Usos de Maquinaria</p>
 
                 <h6><span class="badge bg-secondary">Usuario</span></h6>
                 <ul class="small">

@@ -1,0 +1,462 @@
+{% extends 'proyectos/base.html' %}
+
+{% block title %}{% if object %}Editar{% else %}Registrar{% endif %} Uso de Maquinaria{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="bi bi-clock-history"></i> {% if object %}Editar Uso de Maquinaria{% else %}Registrar Uso de Maquinaria{% endif %}</h2>
+        <p class="text-muted">Complete la información del uso de maquinaria</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'usos_maquinaria_list' empresa_codigo %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Datos del Uso de Maquinaria</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.proyecto.id_for_label }}" class="form-label fw-semibold">
+                                Proyecto <span class="text-danger">*</span>
+                            </label>
+                            {{ form.proyecto }}
+                            {% if form.proyecto.errors %}
+                            <div class="invalid-feedback d-block">{{ form.proyecto.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.maquinaria.id_for_label }}" class="form-label fw-semibold">
+                                Maquinaria <span class="text-danger">*</span>
+                            </label>
+                            {{ form.maquinaria }}
+                            {% if form.maquinaria.errors %}
+                            <div class="invalid-feedback d-block">{{ form.maquinaria.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3">Fechas</h6>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.fecha_inicio.id_for_label }}" class="form-label fw-semibold">
+                                Fecha de Inicio <span class="text-danger">*</span>
+                            </label>
+                            {{ form.fecha_inicio }}
+                            {% if form.fecha_inicio.errors %}
+                            <div class="invalid-feedback d-block">{{ form.fecha_inicio.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.fecha_fin.id_for_label }}" class="form-label fw-semibold">
+                                Fecha de Fin
+                            </label>
+                            {{ form.fecha_fin }}
+                            {% if form.fecha_fin.errors %}
+                            <div class="invalid-feedback d-block">{{ form.fecha_fin.errors }}</div>
+                            {% endif %}
+                            <small class="text-muted">Dejar vacío si aún está en uso</small>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3">Horómetros</h6>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.horometro_inicial.id_for_label }}" class="form-label fw-semibold">
+                                Horómetro Inicial <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                {{ form.horometro_inicial }}
+                                <span class="input-group-text">hrs</span>
+                            </div>
+                            {% if form.horometro_inicial.errors %}
+                            <div class="invalid-feedback d-block">{{ form.horometro_inicial.errors }}</div>
+                            {% endif %}
+                            <small class="text-muted">Lectura al iniciar</small>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.horometro_final.id_for_label }}" class="form-label fw-semibold">
+                                Horómetro Final
+                            </label>
+                            <div class="input-group">
+                                {{ form.horometro_final }}
+                                <span class="input-group-text">hrs</span>
+                            </div>
+                            {% if form.horometro_final.errors %}
+                            <div class="invalid-feedback d-block">{{ form.horometro_final.errors }}</div>
+                            {% endif %}
+                            <small class="text-muted">Lectura al finalizar</small>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.tarifa_aplicada.id_for_label }}" class="form-label fw-semibold">
+                                Tarifa Aplicada (L./hora) <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">L.</span>
+                                {{ form.tarifa_aplicada }}
+                            </div>
+                            {% if form.tarifa_aplicada.errors %}
+                            <div class="invalid-feedback d-block">{{ form.tarifa_aplicada.errors }}</div>
+                            {% endif %}
+                            <small class="text-muted">Costo por hora de uso</small>
+                        </div>
+                    </div>
+
+                    {% if object and object.horas_trabajadas > 0 %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-calculator"></i> <strong>Cálculo:</strong>
+                        {{ object.horas_trabajadas }} horas × L. {{ object.tarifa_aplicada|floatformat:2 }} =
+                        <strong>L. {{ object.costo_total|floatformat:2 }}</strong>
+                    </div>
+                    {% endif %}
+
+                    <hr class="my-4">
+                    <h6 class="mb-3">Información Adicional</h6>
+
+                    <div class="mb-3">
+                        <label for="{{ form.operador.id_for_label }}" class="form-label fw-semibold">
+                            Operador
+                        </label>
+                        {{ form.operador }}
+                        {% if form.operador.errors %}
+                        <div class="invalid-feedback d-block">{{ form.operador.errors }}</div>
+                        {% endif %}
+                        <small class="text-muted">Seleccione el usuario con rol operador que operará la maquinaria</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.descripcion_trabajo.id_for_label }}" class="form-label fw-semibold">
+                            Descripción del Trabajo Realizado
+                        </label>
+                        {{ form.descripcion_trabajo }}
+                        {% if form.descripcion_trabajo.errors %}
+                        <div class="invalid-feedback d-block">{{ form.descripcion_trabajo.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.observaciones.id_for_label }}" class="form-label fw-semibold">
+                            Observaciones
+                        </label>
+                        {{ form.observaciones }}
+                        {% if form.observaciones.errors %}
+                        <div class="invalid-feedback d-block">{{ form.observaciones.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'usos_maquinaria_list' empresa_codigo %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-save"></i> Guardar Registro
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+// Auto-calcular y mostrar costo cuando cambian los horómetros
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar Select2 para los selects
+    $('#id_proyecto').select2({
+        theme: 'bootstrap-5',
+        placeholder: 'Seleccione un proyecto',
+        allowClear: true
+    });
+
+    $('#id_maquinaria').select2({
+        theme: 'bootstrap-5',
+        placeholder: 'Seleccione una maquinaria',
+        allowClear: true
+    });
+
+    $('#id_operador').select2({
+        theme: 'bootstrap-5',
+        placeholder: 'Seleccione un operador',
+        allowClear: true
+    });
+
+    const horometroInicial = document.querySelector('input[name="horometro_inicial"]');
+    const horometroFinal = document.querySelector('input[name="horometro_final"]');
+    const tarifa = document.querySelector('input[name="tarifa_aplicada"]');
+    const maquinariaSelect = document.querySelector('select[name="maquinaria"]');
+
+    // Obtener el ID del uso actual (si estamos editando)
+    const usoActualId = {% if object %}{{ object.pk }}{% else %}null{% endif %};
+
+    let horometroMinimo = 0; // Se actualizará con AJAX
+
+    // Auto-llenar tarifa y validar horómetro cuando se selecciona una maquinaria
+    if (maquinariaSelect) {
+        $(maquinariaSelect).on('select2:select', function(e) {
+            const maquinariaId = this.value;
+            if (maquinariaId) {
+                // Construir URL con parámetro uso_id si estamos editando
+                let url = `/{{ empresa_codigo }}/api/maquinaria/${maquinariaId}/datos/`;
+                if (usoActualId) {
+                    url += `?uso_id=${usoActualId}`;
+                }
+
+                // Hacer petición AJAX para obtener datos de la maquinaria
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Auto-llenar tarifa SIEMPRE con la tarifa actual de la maquinaria
+                            tarifa.value = data.tarifa_hora;
+
+                            // Guardar el horómetro mínimo permitido
+                            horometroMinimo = parseFloat(data.horometro_minimo);
+
+                            // Mostrar alerta informativa
+                            let alertDiv = document.getElementById('info-horometro');
+                            if (!alertDiv) {
+                                alertDiv = document.createElement('div');
+                                alertDiv.id = 'info-horometro';
+                                alertDiv.className = 'alert alert-warning mt-2';
+                                horometroInicial.parentElement.appendChild(alertDiv);
+                            }
+
+                            if (data.ultimo_horometro_final) {
+                                alertDiv.innerHTML = `
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    <strong>Importante:</strong> El último horómetro registrado para esta maquinaria fue
+                                    <strong>${data.ultimo_horometro_final} hrs</strong>.
+                                    El horómetro inicial es ese ultimo valor.
+                                `;
+                            } else {
+                                alertDiv.innerHTML = `
+                                    <i class="bi bi-info-circle"></i>
+                                    Horómetro actual de la maquinaria: <strong>${data.horometro_actual} hrs</strong>
+                                `;
+                            }
+
+                            // Auto-llenar horómetro inicial solo si está vacío (modo creación)
+                            // En modo edición, el horómetro inicial ya está establecido y no debe cambiar
+                            if (!horometroInicial.value || horometroInicial.value == '0' || horometroInicial.value == '0.00') {
+                                horometroInicial.value = data.horometro_minimo;
+                            }
+
+                            // Validar horómetro inicial inmediatamente
+                            validarHorometroInicial();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error al obtener datos de maquinaria:', error);
+                    });
+            } else {
+                // Limpiar alertas si no hay maquinaria seleccionada
+                const alertDiv = document.getElementById('info-horometro');
+                if (alertDiv) {
+                    alertDiv.remove();
+                }
+                horometroMinimo = 0;
+            }
+        });
+    }
+
+    function calcularCosto() {
+        const inicial = parseFloat(horometroInicial.value) || 0;
+        const final = parseFloat(horometroFinal.value) || 0;
+        const tarifaHora = parseFloat(tarifa.value) || 0;
+
+        // Eliminar todos los divs de cálculo existentes (por si hay duplicados)
+        document.querySelectorAll('[id="costo-calculado"]').forEach(div => div.remove());
+
+        if (final > inicial && tarifaHora > 0) {
+            const horas = final - inicial;
+            const costo = horas * tarifaHora;
+
+            // Crear nuevo div
+            const alertDiv = document.createElement('div');
+            alertDiv.id = 'costo-calculado';
+            alertDiv.className = 'alert alert-info mt-3';
+            alertDiv.innerHTML = `
+                <i class="bi bi-calculator"></i> <strong>Cálculo:</strong>
+                ${horas.toFixed(2)} horas × L. ${tarifaHora.toFixed(2)} =
+                <strong>L. ${costo.toFixed(2)}</strong>
+            `;
+
+            // Insertar después del campo de tarifa
+            const tarifaRow = tarifa.closest('.mb-3');
+            if (tarifaRow) {
+                tarifaRow.after(alertDiv);
+            }
+        }
+    }
+
+    // Validación del horómetro inicial
+    function validarHorometroInicial() {
+        // Si estamos editando, NO validar el horómetro inicial (está readonly)
+        if (usoActualId) {
+            horometroInicial.setCustomValidity('');
+            horometroInicial.classList.remove('is-invalid');
+            const feedback = horometroInicial.parentElement.querySelector('.invalid-feedback');
+            if (feedback && !feedback.hasAttribute('data-django')) {
+                feedback.remove();
+            }
+            return;
+        }
+
+        const inicial = parseFloat(horometroInicial.value) || 0;
+
+        if (horometroInicial.value && horometroMinimo > 0 && inicial < horometroMinimo) {
+            horometroInicial.setCustomValidity(`El horómetro inicial debe ser al menos ${horometroMinimo} hrs`);
+            horometroInicial.classList.add('is-invalid');
+
+            // Mostrar feedback
+            let feedback = horometroInicial.parentElement.querySelector('.invalid-feedback');
+            if (!feedback) {
+                feedback = document.createElement('div');
+                feedback.className = 'invalid-feedback d-block';
+                horometroInicial.parentElement.appendChild(feedback);
+            }
+            feedback.textContent = `El horómetro inicial no puede ser menor a ${horometroMinimo} hrs (último registrado)`;
+        } else {
+            horometroInicial.setCustomValidity('');
+            horometroInicial.classList.remove('is-invalid');
+
+            const feedback = horometroInicial.parentElement.querySelector('.invalid-feedback');
+            if (feedback && !feedback.hasAttribute('data-django')) {
+                feedback.remove();
+            }
+        }
+    }
+
+    // Validación de horómetros en tiempo real
+    function validarHorometros() {
+        const inicial = parseFloat(horometroInicial.value) || 0;
+        const final = parseFloat(horometroFinal.value) || 0;
+
+        // Validar que el final sea mayor que el inicial
+        if (horometroFinal.value && final <= inicial) {
+            horometroFinal.setCustomValidity('El horómetro final debe ser mayor al inicial');
+            horometroFinal.classList.add('is-invalid');
+
+            let feedback = horometroFinal.parentElement.querySelector('.invalid-feedback');
+            if (!feedback) {
+                feedback = document.createElement('div');
+                feedback.className = 'invalid-feedback d-block';
+                horometroFinal.parentElement.appendChild(feedback);
+            }
+            feedback.textContent = 'El horómetro final debe ser mayor al inicial';
+        } else {
+            horometroFinal.setCustomValidity('');
+            horometroFinal.classList.remove('is-invalid');
+
+            const feedback = horometroFinal.parentElement.querySelector('.invalid-feedback');
+            if (feedback && !feedback.hasAttribute('data-django')) {
+                feedback.remove();
+            }
+        }
+    }
+
+    if (horometroInicial && horometroFinal && tarifa) {
+        // Solo agregar listener al horómetro inicial si estamos en modo creación
+        if (!usoActualId) {
+            horometroInicial.addEventListener('input', function() {
+                validarHorometroInicial();
+                calcularCosto();
+                validarHorometros();
+            });
+        }
+
+        horometroFinal.addEventListener('input', function() {
+            calcularCosto();
+            validarHorometros();
+        });
+
+        tarifa.addEventListener('input', calcularCosto);
+
+        // Calcular al cargar si ya hay valores
+        calcularCosto();
+        validarHorometros();
+
+        // Si hay maquinaria seleccionada al cargar (edición), cargar sus datos
+        if (maquinariaSelect && maquinariaSelect.value) {
+            const maquinariaId = maquinariaSelect.value;
+            // Construir URL con parámetro uso_id si estamos editando
+            let url = `/{{ empresa_codigo }}/api/maquinaria/${maquinariaId}/datos/`;
+            if (usoActualId) {
+                url += `?uso_id=${usoActualId}`;
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        horometroMinimo = parseFloat(data.horometro_minimo);
+                        validarHorometroInicial();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    }
+
+    // Validación antes de enviar el formulario
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const inicial = parseFloat(horometroInicial.value) || 0;
+            const final = parseFloat(horometroFinal.value) || 0;
+
+            // Validar horómetro inicial contra mínimo SOLO en modo creación
+            if (!usoActualId && horometroInicial.value && horometroMinimo > 0 && inicial < horometroMinimo) {
+                e.preventDefault();
+                alert(`Error: El horómetro inicial debe ser al menos ${horometroMinimo} hrs (último horómetro registrado)`);
+                horometroInicial.focus();
+                return false;
+            }
+
+            // Validar horómetro final mayor que inicial
+            if (horometroFinal.value && final <= inicial) {
+                e.preventDefault();
+                alert('Error: El horómetro final debe ser mayor al inicial');
+                horometroFinal.focus();
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
