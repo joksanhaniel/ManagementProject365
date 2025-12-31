@@ -30,21 +30,13 @@
                     {% csrf_token %}
 
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="{{ form.codigo.id_for_label }}" class="form-label">Código *</label>
-                            {{ form.codigo }}
-                            {% if form.codigo.errors %}
-                                <div class="text-danger">{{ form.codigo.errors }}</div>
-                            {% endif %}
-                            <small class="text-muted">Código único para la empresa (solo mayúsculas y números, sin espacios)</small>
-                        </div>
-
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-12 mb-3">
                             <label for="{{ form.nombre.id_for_label }}" class="form-label">Nombre Comercial *</label>
                             {{ form.nombre }}
                             {% if form.nombre.errors %}
                                 <div class="text-danger">{{ form.nombre.errors }}</div>
                             {% endif %}
+                            <small class="text-muted">{{ form.nombre.help_text }}</small>
                         </div>
                     </div>
 
@@ -124,9 +116,10 @@
     </div>
 </div>
 
-<div class="alert alert-warning mt-3">
-    <i class="bi bi-exclamation-triangle"></i>
-    <strong>Importante:</strong> El código de la empresa se usará en las URLs para identificarla.
-    Una vez creada, el código no se puede cambiar. Ejemplo: si el código es "ABC", la URL será /abc/dashboard/
+<div class="alert alert-info mt-3">
+    <i class="bi bi-info-circle"></i>
+    <strong>Importante:</strong> El código de la empresa se genera automáticamente desde el nombre comercial y se usa en las URLs.
+    Si cambias el nombre, el código se actualizará automáticamente.
+    <br><strong>Ejemplo:</strong> "Constructora ABC" → código "CONSTRUCTORA-ABC" → URL: /CONSTRUCTORA-ABC/dashboard/
 </div>
 {% endblock %}

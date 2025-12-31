@@ -73,9 +73,10 @@ class Empresa(models.Model):
     Modelo para gestión de múltiples empresas en el sistema.
     Cada empresa tiene sus propios proyectos, clientes, empleados, etc.
     """
-    codigo = models.CharField(max_length=20, unique=True, verbose_name='Código',
-                              help_text='Código único para identificar la empresa en URLs')
-    nombre = models.CharField(max_length=200, verbose_name='Nombre Comercial')
+    nombre = models.CharField(max_length=200, unique=True, verbose_name='Nombre Comercial',
+                             help_text='Nombre único que identifica la empresa')
+    codigo = models.CharField(max_length=200, unique=True, editable=False, verbose_name='Código',
+                             help_text='Código generado automáticamente del nombre (se usa en URLs)')
     razon_social = models.CharField(max_length=200, verbose_name='Razón Social')
     rtn = models.CharField(max_length=14, unique=True, verbose_name='RTN')
     telefono = models.CharField(max_length=15, blank=True, null=True, verbose_name='Teléfono')
@@ -92,11 +93,31 @@ class Empresa(models.Model):
         ordering = ['nombre']
 
     def __str__(self):
-        return f"{self.codigo} - {self.nombre}"
+        return self.nombre
+
+    def save(self, *args, **kwargs):
+        """Genera automáticamente el código a partir del nombre"""
+        if not self.codigo or self.has_nombre_changed():
+            import re
+            codigo = self.nombre.upper()
+            codigo = re.sub(r'[^\w\s-]', '', codigo)  # Eliminar caracteres especiales
+            codigo = re.sub(r'[-\s]+', '-', codigo)    # Reemplazar espacios con guiones
+            self.codigo = codigo.strip('-')
+        super().save(*args, **kwargs)
+
+    def has_nombre_changed(self):
+        """Verifica si el nombre ha cambiado"""
+        if not self.pk:
+            return True
+        try:
+            old = Empresa.objects.get(pk=self.pk)
+            return old.nombre != self.nombre
+        except Empresa.DoesNotExist:
+            return True
 
     def get_url_prefix(self):
         """Retorna el prefijo de URL para esta empresa"""
-        return self.codigo.lower()
+        return self.codigo
 
 
 class Cliente(models.Model):

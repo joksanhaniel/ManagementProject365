@@ -598,21 +598,15 @@ class EmpresaForm(forms.ModelForm):
     class Meta:
         from .models import Empresa
         model = Empresa
-        fields = '__all__'
+        exclude = ['codigo']  # Código se genera automáticamente desde nombre
         widgets = {
-            'codigo': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'EMPRESA1',
-                'pattern': '[A-Z0-9]+',
-                'title': 'Solo letras mayúsculas y números, sin espacios'
-            }),
             'nombre': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Empresa ABC'
+                'placeholder': 'Constructora ABC'
             }),
             'razon_social': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Empresa ABC S.A. de C.V.'
+                'placeholder': 'Constructora ABC S.A. de C.V.'
             }),
             'rtn': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -635,10 +629,6 @@ class EmpresaForm(forms.ModelForm):
                 'class': 'form-check-input'
             }),
         }
-
-    def clean_codigo(self):
-        """Validar que el código esté en mayúsculas y sin espacios"""
-        codigo = self.cleaned_data.get('codigo')
-        if codigo:
-            codigo = codigo.upper().replace(' ', '')
-        return codigo
+        help_texts = {
+            'nombre': 'Nombre de la empresa. El código se generará automáticamente en mayúsculas para las URLs. Ejemplo: "Constructora ABC" → código "CONSTRUCTORA-ABC" → URL /CONSTRUCTORA-ABC/dashboard/'
+        }

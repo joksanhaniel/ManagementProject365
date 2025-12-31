@@ -83,14 +83,14 @@ WSGI_APPLICATION = 'mpp365_system.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'mssql',
-        'NAME': config('DB_NAME', default='MPP365DB'),
-        'USER': config('DB_USER', default='sa'),
-        'PASSWORD': config('DB_PASSWORD', default=''),
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME', default='mpp365'),
+        'USER': config('DB_USER', default='postgres'),
+        'PASSWORD': config('DB_PASSWORD', default='admin'),
         'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='1433'),
+        'PORT': config('DB_PORT', default='5432'),
         'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server',
+            'options': '-c search_path=public'
         },
     }
 }

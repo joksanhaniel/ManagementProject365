@@ -14,7 +14,12 @@
       "Bash(grep:*)",
       "Bash(dir:*)",
       "Bash(sqlcmd:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(pip install:*)",
+      "Bash(psql:*)",
+      "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\16\\\\bin\\\\psql.exe\" --version)",
+      "Bash(set:*)",
+      "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\16\\\\bin\\\\psql.exe\" -U postgres -c \"CREATE DATABASE mpp365 WITH ENCODING ''UTF8'' LC_COLLATE=''C'' LC_CTYPE=''C'' TEMPLATE=template0;\")"
     ]
   }
 }
