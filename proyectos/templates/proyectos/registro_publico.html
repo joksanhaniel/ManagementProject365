@@ -1,0 +1,308 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Multi Project Pro 365 - Sistema de Gestión para Empresas Constructoras</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 20px 0;
+        }
+        .registro-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 30px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 30px;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .section-title {
+            color: #667eea;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .trial-badge {
+            background: #28a745;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .feature-list {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        .feature-list li {
+            padding: 8px 0;
+        }
+        .feature-list i {
+            color: #28a745;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container registro-container">
+        <div class="card">
+            <div class="card-header text-center">
+                <h1 class="mb-2"><i class="fas fa-hard-hat"></i> Multi Project Pro 365</h1>
+                <h4>Sistema de Gestión para Empresas Constructoras</h4>
+                <div class="trial-badge">
+                    <i class="fas fa-gift"></i> 15 Días de Prueba GRATIS - Acceso Completo
+                </div>
+            </div>
+            <div class="card-body p-4 p-md-5">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="feature-list mb-4">
+                    <h5 class="text-center mb-3"><i class="fas fa-star"></i> ¿Qué incluye tu prueba gratuita?</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check-circle"></i> <strong>Acceso completo a todos los módulos</strong></li>
+                                <li><i class="fas fa-check-circle"></i> Gestión de proyectos y empleados</li>
+                                <li><i class="fas fa-check-circle"></i> Control de planillas y gastos</li>
+                                <li><i class="fas fa-check-circle"></i> Maquinaria y tarifas</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check-circle"></i> Reportes y cálculo de utilidades</li>
+                                <li><i class="fas fa-check-circle"></i> 15 días completos de prueba</li>
+                                <li><i class="fas fa-check-circle"></i> Soporte por WhatsApp</li>
+                                <li><i class="fas fa-check-circle"></i> Sin tarjeta de crédito</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="alert alert-warning mt-3">
+                        <small><i class="fas fa-info-circle"></i> <strong>Limitaciones del Trial:</strong> Durante el período de prueba podrás crear solo 1 usuario (administrador) y 1 registro en cada módulo para probar el sistema. Al suscribirte a un plan, tendrás usuarios y registros ilimitados sin restricciones.</small>
+                    </div>
+                </div>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <!-- Datos de la Empresa -->
+                    <h5 class="section-title">
+                        <i class="fas fa-building"></i> Datos de la Empresa
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_nombre_empresa" class="form-label">Nombre de la Empresa *</label>
+                            {{ form.nombre_empresa }}
+                            {% if form.nombre_empresa.errors %}
+                                <div class="text-danger small">{{ form.nombre_empresa.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_razon_social" class="form-label">Razón Social *</label>
+                            {{ form.razon_social }}
+                            {% if form.razon_social.errors %}
+                                <div class="text-danger small">{{ form.razon_social.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="id_rtn" class="form-label">RTN *</label>
+                            {{ form.rtn }}
+                            {% if form.rtn.errors %}
+                                <div class="text-danger small">{{ form.rtn.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_telefono_empresa" class="form-label">Teléfono *</label>
+                            {{ form.telefono_empresa }}
+                            {% if form.telefono_empresa.errors %}
+                                <div class="text-danger small">{{ form.telefono_empresa.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_email_empresa" class="form-label">Email *</label>
+                            {{ form.email_empresa }}
+                            {% if form.email_empresa.errors %}
+                                <div class="text-danger small">{{ form.email_empresa.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_direccion_empresa" class="form-label">Dirección</label>
+                        {{ form.direccion_empresa }}
+                        {% if form.direccion_empresa.errors %}
+                            <div class="text-danger small">{{ form.direccion_empresa.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Datos del Usuario Administrador -->
+                    <h5 class="section-title">
+                        <i class="fas fa-user-shield"></i> Datos del Administrador
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_first_name" class="form-label">Nombre *</label>
+                            {{ form.first_name }}
+                            {% if form.first_name.errors %}
+                                <div class="text-danger small">{{ form.first_name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_last_name" class="form-label">Apellido *</label>
+                            {{ form.last_name }}
+                            {% if form.last_name.errors %}
+                                <div class="text-danger small">{{ form.last_name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="id_username" class="form-label">Nombre de Usuario *</label>
+                            {{ form.username }}
+                            {% if form.username.errors %}
+                                <div class="text-danger small">{{ form.username.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_email_usuario" class="form-label">Email *</label>
+                            {{ form.email_usuario }}
+                            {% if form.email_usuario.errors %}
+                                <div class="text-danger small">{{ form.email_usuario.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_telefono_usuario" class="form-label">Teléfono *</label>
+                            {{ form.telefono_usuario }}
+                            {% if form.telefono_usuario.errors %}
+                                <div class="text-danger small">{{ form.telefono_usuario.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_password1" class="form-label">Contraseña *</label>
+                            {{ form.password1 }}
+                            {% if form.password1.errors %}
+                                <div class="text-danger small">{{ form.password1.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_password2" class="form-label">Confirmar Contraseña *</label>
+                            {{ form.password2 }}
+                            {% if form.password2.errors %}
+                                <div class="text-danger small">{{ form.password2.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Términos y Condiciones -->
+                    <div class="mb-4 mt-4">
+                        <div class="form-check">
+                            {{ form.aceptar_terminos }}
+                            <label class="form-check-label" for="id_aceptar_terminos">
+                                Acepto los <a href="{% url 'terminos_condiciones' %}" target="_blank" class="text-decoration-none">términos y condiciones</a> de uso del sistema *
+                            </label>
+                            {% if form.aceptar_terminos.errors %}
+                                <div class="text-danger small">{{ form.aceptar_terminos.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Importante:</strong> Al registrarte, obtendrás 15 días de prueba gratuita con acceso completo y sin límites a todos los módulos del sistema. Podrás probar todas las funcionalidades sin restricciones.
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-rocket"></i> Comenzar Prueba Gratuita
+                        </button>
+                        <a href="{% url 'login' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Ya tengo una cuenta
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="text-center mt-4 text-white">
+            <p>¿Necesitas ayuda? Contáctanos:</p>
+            <p>
+                <a href="mailto:joksanhaniel@gmail.com?subject=Consulta sobre MPP365&body=Hola, tengo una consulta sobre el sistema MPP365..."
+                   class="text-white text-decoration-none" style="transition: opacity 0.3s;"
+                   onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <i class="fas fa-envelope"></i> joksanhaniel@gmail.com
+                </a>
+                <span class="mx-2">|</span>
+                <a href="https://wa.me/50495206618?text=Hola,%20tengo%20una%20consulta%20sobre%20MPP365.%20Me%20gustaría%20saber%20más%20sobre%20el%20sistema%20de%20gestión%20de%20proyectos."
+                   class="text-white text-decoration-none" target="_blank" style="transition: opacity 0.3s;"
+                   onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <i class="fab fa-whatsapp"></i> +504 9520-6618
+                </a>
+            </p>
+            <p class="mb-0 mt-2" style="opacity: 0.4; font-size: 0.7rem;">Desarrollado por LENCADEV</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Agregar clase form-control a todos los campos del formulario
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('input:not([type="checkbox"]):not([type="submit"])');
+            inputs.forEach(input => {
+                input.classList.add('form-control');
+            });
+
+            const textareas = document.querySelectorAll('textarea');
+            textareas.forEach(textarea => {
+                textarea.classList.add('form-control');
+                textarea.rows = 3;
+            });
+
+            const checkbox = document.querySelector('input[type="checkbox"]');
+            if (checkbox) {
+                checkbox.classList.add('form-check-input');
+            }
+        });
+    </script>
+</body>
+</html>

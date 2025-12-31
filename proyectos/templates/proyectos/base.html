@@ -235,6 +235,34 @@
         .sidebar-brand i {
             margin-right: 10px;
         }
+
+        /* Banner de Suscripción */
+        .subscription-banner {
+            position: sticky;
+            top: 0;
+            z-index: 998;
+            border-radius: 0;
+            margin: 0 -20px 20px -20px;
+            padding: 12px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .subscription-banner .progress {
+            height: 8px;
+            margin-top: 10px;
+            background-color: rgba(255,255,255,0.3);
+        }
+
+        @media (max-width: 768px) {
+            .subscription-banner {
+                font-size: 0.85rem;
+                padding: 10px 15px;
+            }
+            .subscription-banner .btn {
+                font-size: 0.75rem;
+                padding: 0.25rem 0.5rem;
+            }
+        }
     </style>
 
     {% block extra_css %}{% endblock %}
@@ -299,6 +327,7 @@
                        href="{% url 'gastos_list' empresa_codigo %}">
                         <i class="bi bi-receipt"></i>Gastos
                     </a>
+                    {% if plan_incluye_maquinaria or esta_en_trial or user.is_superuser %}
                     <a class="nav-link submenu-link {% if 'maquinarias' in request.path %}active{% endif %}"
                        href="{% url 'maquinarias_list' empresa_codigo %}">
                         <i class="bi bi-truck"></i>Maquinaria
@@ -307,6 +336,7 @@
                        href="{% url 'usos_maquinaria_list' empresa_codigo %}">
                         <i class="bi bi-clock-history"></i>Usos de Maquinaria
                     </a>
+                    {% endif %}
                 </div>
             </div>
 
@@ -319,10 +349,24 @@
                 {% endif %}
             {% endif %}
 
+            <!-- Suscripción y Planes (Solo NO superusuarios) -->
+            {% if user.is_authenticated and not user.is_superuser %}
+                <a class="nav-link {% if 'renovar-licencia' in request.path %}active{% endif %}" href="{% url 'renovar_licencia' empresa_codigo %}">
+                    <i class="bi bi-credit-card"></i>Mi Suscripción
+                </a>
+            {% endif %}
+
             <!-- Empresas (Solo Superusuarios) -->
             {% if user.is_authenticated and user.is_superuser %}
             <a class="nav-link {% if 'empresas' in request.path %}active{% endif %}" href="{% url 'empresas_list' empresa_codigo %}">
                 <i class="bi bi-building-gear"></i>Empresas
+            </a>
+            {% endif %}
+
+            <!-- Confirmar Pagos (Solo Superusuarios) -->
+            {% if user.is_authenticated and user.is_superuser %}
+            <a class="nav-link {% if 'confirmar-pagos' in request.path %}active{% endif %}" href="{% url 'confirmar_pagos_global' %}">
+                <i class="bi bi-cash-coin"></i>Confirmar Pagos
             </a>
             {% endif %}
 
@@ -376,7 +420,64 @@
                 </div>
             {% endif %}
 
+            <!-- Banner de Estado de Suscripción -->
+            {% if empresa_actual and not user.is_superuser %}
+                {% if empresa_actual.estado_suscripcion == 'vencida' %}
+                    <div class="alert alert-danger subscription-banner">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                            <div class="mb-2 mb-md-0">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                <strong>Suscripción Vencida</strong> - Tu suscripción expiró el {{ empresa_actual.fecha_expiracion_suscripcion|date:"d/m/Y" }}.
+                                <span class="d-block d-md-inline ms-md-2">Renueva ahora para continuar usando el sistema.</span>
+                            </div>
+                            <a href="{% url 'renovar_licencia' empresa_codigo %}" class="btn btn-light btn-sm">
+                                <i class="bi bi-arrow-repeat"></i> Renovar Ahora
+                            </a>
+                        </div>
+                    </div>
+                {% elif empresa_actual.estado_suscripcion == 'trial' %}
+                    <div class="alert {% if dias_restantes <= 5 %}alert-warning{% else %}alert-info{% endif %} subscription-banner">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                            <div class="mb-2 mb-md-0 flex-grow-1">
+                                <i class="bi bi-{% if dias_restantes <= 5 %}clock-fill{% else %}gift{% endif %}"></i>
+                                <strong>{% if dias_restantes <= 5 %}¡Atención!{% else %}Período de Prueba Activo{% endif %}</strong> - Te quedan <strong>{{ dias_restantes }} día{{ dias_restantes|pluralize }}</strong> de prueba gratuita.
+                                <span class="d-block d-md-inline ms-md-2">Expira el {{ empresa_actual.fecha_expiracion_suscripcion|date:"d/m/Y" }}.</span>
+                                <div class="progress mt-2" style="max-width: 300px;">
+                                    <div class="progress-bar {% if dias_restantes <= 5 %}bg-warning{% else %}bg-info{% endif %}" role="progressbar"
+                                         style="width: {% widthratio dias_restantes 15 100 %}%"
+                                         aria-valuenow="{{ dias_restantes }}" aria-valuemin="0" aria-valuemax="15">
+                                    </div>
+                                </div>
+                            </div>
+                            <a href="{% url 'renovar_licencia' empresa_codigo %}" class="btn {% if dias_restantes <= 5 %}btn-warning{% else %}btn-info text-white{% endif %} btn-sm">
+                                <i class="bi bi-cart-check"></i> Ver Planes
+                            </a>
+                        </div>
+                    </div>
+                {% elif empresa_actual.estado_suscripcion == 'activa' %}
+                    {% if dias_restantes <= 7 %}
+                        <div class="alert alert-info subscription-banner">
+                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                                <div class="mb-2 mb-md-0">
+                                    <i class="bi bi-info-circle-fill"></i>
+                                    <strong>Renovación Próxima</strong> - Tu suscripción vence en <strong>{{ dias_restantes }} día{{ dias_restantes|pluralize }}</strong>
+                                    ({{ empresa_actual.fecha_expiracion_suscripcion|date:"d/m/Y" }}).
+                                </div>
+                                <a href="{% url 'renovar_licencia' empresa_codigo %}" class="btn btn-info btn-sm text-white">
+                                    <i class="bi bi-arrow-repeat"></i> Renovar Anticipadamente
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+
             {% block content %}{% endblock %}
+
+            <!-- Footer discreto -->
+            <div class="text-center mt-5 pb-3">
+                <small class="text-muted" style="opacity: 0.4; font-size: 0.7rem;">Desarrollado por LENCADEV</small>
+            </div>
         </div>
     </div>
 

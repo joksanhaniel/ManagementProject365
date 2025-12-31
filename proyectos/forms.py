@@ -3,7 +3,8 @@ from django.forms import inlineformset_factory
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import (
     Cliente, Proveedor, Empleado, Proyecto, AsignacionEmpleado, Planilla,
-    DetallePlanilla, Gasto, Pago, Usuario, Deduccion, Bonificacion, HoraExtra
+    DetallePlanilla, Gasto, Pago, Usuario, Deduccion, Bonificacion, HoraExtra,
+    PagoRecibido
 )
 
 
@@ -631,4 +632,254 @@ class EmpresaForm(forms.ModelForm):
         }
         help_texts = {
             'nombre': 'Nombre de la empresa. El código se generará automáticamente en mayúsculas para las URLs. Ejemplo: "Constructora ABC" → código "CONSTRUCTORA-ABC" → URL /CONSTRUCTORA-ABC/dashboard/'
+        }
+
+
+# ====== FORMULARIO DE REGISTRO PÚBLICO ======
+
+class RegistroPublicoForm(forms.Form):
+    """Formulario para registro público de nuevas empresas con trial gratuito"""
+
+    # Datos de la Empresa
+    nombre_empresa = forms.CharField(
+        max_length=200,
+        label='Nombre de la Empresa',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Constructora ABC'
+        }),
+        help_text='Nombre comercial de tu empresa'
+    )
+
+    razon_social = forms.CharField(
+        max_length=200,
+        label='Razón Social',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Constructora ABC S.A. de C.V.'
+        })
+    )
+
+    rtn = forms.CharField(
+        max_length=14,
+        label='RTN',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '08011234567890'
+        }),
+        help_text='Registro Tributario Nacional de la empresa'
+    )
+
+    telefono_empresa = forms.CharField(
+        max_length=15,
+        label='Teléfono de la Empresa',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '2234-5678'
+        })
+    )
+
+    email_empresa = forms.EmailField(
+        label='Email de la Empresa',
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'info@miempresa.com'
+        })
+    )
+
+    direccion_empresa = forms.CharField(
+        required=False,
+        label='Dirección',
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'Dirección completa de la empresa'
+        })
+    )
+
+    # Datos del Usuario Administrador
+    username = forms.CharField(
+        max_length=150,
+        label='Nombre de Usuario',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'juan.perez'
+        }),
+        help_text='Nombre de usuario para acceder al sistema'
+    )
+
+    email_usuario = forms.EmailField(
+        label='Email del Administrador',
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'juan.perez@miempresa.com'
+        }),
+        help_text='Usaremos este email para notificaciones importantes'
+    )
+
+    first_name = forms.CharField(
+        max_length=150,
+        label='Nombre',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Juan'
+        })
+    )
+
+    last_name = forms.CharField(
+        max_length=150,
+        label='Apellido',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Pérez'
+        })
+    )
+
+    telefono_usuario = forms.CharField(
+        max_length=15,
+        label='Teléfono Personal',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '9999-9999'
+        })
+    )
+
+    password1 = forms.CharField(
+        label='Contraseña',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': '••••••••'
+        }),
+        help_text='Mínimo 8 caracteres'
+    )
+
+    password2 = forms.CharField(
+        label='Confirmar Contraseña',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': '••••••••'
+        })
+    )
+
+    aceptar_terminos = forms.BooleanField(
+        label='Acepto los términos y condiciones',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        }),
+        required=True
+    )
+
+    def clean_rtn(self):
+        """Validar que el RTN no esté ya registrado"""
+        rtn = self.cleaned_data.get('rtn')
+        from .models import Empresa
+        if Empresa.objects.filter(rtn=rtn).exists():
+            raise forms.ValidationError('Este RTN ya está registrado en el sistema.')
+        return rtn
+
+    def clean_username(self):
+        """Validar que el username no esté ya registrado"""
+        username = self.cleaned_data.get('username')
+        from .models import Usuario
+        if Usuario.objects.filter(username=username).exists():
+            raise forms.ValidationError('Este nombre de usuario ya está en uso.')
+        return username
+
+    def clean_email_usuario(self):
+        """Validar que el email no esté ya registrado"""
+        email = self.cleaned_data.get('email_usuario')
+        from .models import Usuario
+        if Usuario.objects.filter(email=email).exists():
+            raise forms.ValidationError('Este email ya está registrado.')
+        return email
+
+    def clean(self):
+        """Validar que las contraseñas coincidan"""
+        cleaned_data = super().clean()
+        password1 = cleaned_data.get('password1')
+        password2 = cleaned_data.get('password2')
+
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError('Las contraseñas no coinciden.')
+
+        if password1 and len(password1) < 8:
+            raise forms.ValidationError('La contraseña debe tener al menos 8 caracteres.')
+
+        return cleaned_data
+
+
+class ReportarPagoForm(forms.ModelForm):
+    """
+    Formulario para que los clientes reporten sus pagos realizados.
+    Se usa en la página de renovación de licencia.
+    """
+    def __init__(self, *args, **kwargs):
+        empresa = kwargs.pop('empresa', None)
+        super().__init__(*args, **kwargs)
+
+        # Filtrar opciones de planes según si ya pagó activación
+        if empresa:
+            if empresa.cuota_instalacion_pagada:
+                # Mostrar SOLO planes de renovación (sin "_nuevo")
+                self.fields['plan_seleccionado'].choices = [
+                    choice for choice in PagoRecibido.PLAN_CHOICES
+                    if '_nuevo' not in choice[0]
+                ]
+            else:
+                # Mostrar SOLO planes de nuevo cliente (con "_nuevo")
+                self.fields['plan_seleccionado'].choices = [
+                    choice for choice in PagoRecibido.PLAN_CHOICES
+                    if '_nuevo' in choice[0]
+                ]
+
+    class Meta:
+        model = PagoRecibido
+        fields = ['plan_seleccionado', 'monto', 'fecha_pago', 'metodo_pago', 'referencia', 'comprobante', 'notas_cliente']
+        widgets = {
+            'plan_seleccionado': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True
+            }),
+            'monto': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': '2000.00',
+                'step': '0.01',
+                'required': True
+            }),
+            'fecha_pago': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+                'required': True
+            }),
+            'metodo_pago': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True
+            }),
+            'referencia': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Número de referencia o transacción',
+                'maxlength': 100
+            }),
+            'comprobante': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*,.pdf'
+            }),
+            'notas_cliente': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Información adicional sobre el pago (opcional)'
+            }),
+        }
+        labels = {
+            'plan_seleccionado': 'Plan que deseas activar',
+            'monto': 'Monto pagado (L.)',
+            'fecha_pago': 'Fecha del pago',
+            'metodo_pago': 'Método de pago',
+            'referencia': 'Número de referencia',
+            'comprobante': 'Comprobante de pago (imagen o PDF)',
+            'notas_cliente': 'Notas adicionales',
+        }
+        help_texts = {
+            'comprobante': 'Sube una foto o PDF del comprobante de pago',
+            'referencia': 'Número de transacción o autorización',
         }

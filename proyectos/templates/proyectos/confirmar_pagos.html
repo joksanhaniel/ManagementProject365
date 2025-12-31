@@ -1,0 +1,251 @@
+{% extends 'proyectos/base.html' %}
+{% load static %}
+
+{% block title %}Confirmar Pagos - MPP365{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pago-card {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+    }
+    .pago-card:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        border-color: #667eea;
+    }
+    .pago-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #f8f9fa;
+    }
+    .empresa-nombre {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #333;
+    }
+    .monto-badge {
+        background: #667eea;
+        color: white;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+    .plan-info {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+    .plan-badge {
+        display: inline-block;
+        background: #28a745;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 15px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    .btn-confirmar {
+        background: #28a745;
+        color: white;
+        padding: 10px 30px;
+        border: none;
+        border-radius: 5px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .btn-confirmar:hover {
+        background: #218838;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+    }
+    .btn-rechazar {
+        background: #dc3545;
+        color: white;
+        padding: 10px 30px;
+        border: none;
+        border-radius: 5px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .btn-rechazar:hover {
+        background: #c82333;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    }
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+    }
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    .info-label {
+        font-weight: 600;
+        color: #666;
+    }
+    .info-value {
+        color: #333;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #999;
+    }
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        opacity: 0.3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-cash-register"></i> Confirmar Pagos Recibidos</h2>
+            <p class="text-muted">Gestiona los pagos pendientes de confirmación</p>
+        </div>
+    </div>
+
+    {% if pagos_pendientes %}
+        <div class="row">
+            {% for pago in pagos_pendientes %}
+            <div class="col-lg-6 col-12">
+                <div class="pago-card">
+                    <div class="pago-header">
+                        <div>
+                            <div class="empresa-nombre">{{ pago.empresa.nombre }}</div>
+                            <small class="text-muted">RTN: {{ pago.empresa.rtn }}</small>
+                        </div>
+                        <div class="monto-badge">
+                            L. {{ pago.monto|floatformat:2 }}
+                        </div>
+                    </div>
+
+                    <div class="plan-info">
+                        <div class="plan-badge">
+                            {% if pago.empresa.plan_elegido %}
+                                {{ pago.get_plan_seleccionado_display|default:pago.empresa.get_plan_elegido_display }}
+                            {% else %}
+                                Plan a confirmar
+                            {% endif %}
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">Fecha de Pago:</span>
+                            <span class="info-value">{{ pago.fecha_pago|date:"d/m/Y" }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Método de Pago:</span>
+                            <span class="info-value">{{ pago.get_metodo_pago_display }}</span>
+                        </div>
+                        {% if pago.referencia %}
+                        <div class="info-row">
+                            <span class="info-label">Referencia:</span>
+                            <span class="info-value">{{ pago.referencia }}</span>
+                        </div>
+                        {% endif %}
+                        {% if pago.notas_cliente %}
+                        <div class="info-row">
+                            <span class="info-label">Notas:</span>
+                            <span class="info-value">{{ pago.notas_cliente }}</span>
+                        </div>
+                        {% endif %}
+                        {% if pago.comprobante %}
+                        <div class="info-row">
+                            <span class="info-label">Comprobante:</span>
+                            <span class="info-value">
+                                <a href="{{ pago.comprobante.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-file"></i> Ver Comprobante
+                                </a>
+                            </span>
+                        </div>
+                        {% endif %}
+                        <div class="info-row">
+                            <span class="info-label">Registrado:</span>
+                            <span class="info-value">{{ pago.fecha_registro|date:"d/m/Y H:i" }}</span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <form method="POST" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="pago_id" value="{{ pago.id }}">
+                            <input type="hidden" name="accion" value="confirmar">
+                            <button type="submit" class="btn-confirmar" onclick="return confirm('¿Confirmar pago de {{ pago.empresa.nombre }} por L. {{ pago.monto|floatformat:2 }}?')">
+                                <i class="fas fa-check-circle"></i> Confirmar Pago
+                            </button>
+                        </form>
+
+                        <button type="button" class="btn-rechazar" onclick="rechazarPago({{ pago.id }}, '{{ pago.empresa.nombre }}')">
+                            <i class="fas fa-times-circle"></i> Rechazar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="empty-state">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>No hay pagos pendientes</h3>
+                    <p>Todos los pagos han sido procesados</p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Modal para rechazar pago -->
+<div class="modal fade" id="rechazarModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Rechazar Pago</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="rechazarForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="pago_id" id="rechazar_pago_id">
+                    <input type="hidden" name="accion" value="rechazar">
+
+                    <p>¿Estás seguro de rechazar el pago de <strong id="rechazar_empresa_nombre"></strong>?</p>
+
+                    <div class="mb-3">
+                        <label for="motivo" class="form-label">Motivo del rechazo:</label>
+                        <textarea class="form-control" id="motivo" name="motivo" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar Rechazo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function rechazarPago(pagoId, empresaNombre) {
+    document.getElementById('rechazar_pago_id').value = pagoId;
+    document.getElementById('rechazar_empresa_nombre').textContent = empresaNombre;
+    var modal = new bootstrap.Modal(document.getElementById('rechazarModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

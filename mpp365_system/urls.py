@@ -24,12 +24,22 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    # Login sin prefijo de empresa
-    path('', proyectos_views.CustomLoginView.as_view(), name='login'),
+    # Landing page principal con planes
+    path('', proyectos_views.landing, name='landing'),
+
+    # Login y autenticación
+    path('login/', proyectos_views.CustomLoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(next_page='/'), name='logout'),
+
+    # Registro público (SaaS)
+    path('registro/', proyectos_views.registro_publico, name='registro_publico'),
+    path('terminos-condiciones/', proyectos_views.terminos_condiciones, name='terminos_condiciones'),
 
     # Selección de empresa (solo para superusuarios)
     path('seleccionar-empresa/', proyectos_views.seleccionar_empresa, name='seleccionar_empresa'),
+
+    # Confirmar pagos (solo para superusuarios) - URL global sin empresa
+    path('pagos/confirmar/', proyectos_views.confirmar_pagos, name='confirmar_pagos_global'),
 
     # URLs con prefijo de empresa
     path('<str:empresa_codigo>/', include('proyectos.urls')),

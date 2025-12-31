@@ -77,6 +77,11 @@ urlpatterns = [
     path('usuarios/<int:pk>/editar/', views.usuario_update, name='usuario_update'),
     path('usuarios/<int:pk>/eliminar/', views.usuario_delete, name='usuario_delete'),
 
+    # Suscripciones SaaS
+    path('renovar-licencia/', views.renovar_licencia, name='renovar_licencia'),
+    path('reportar-pago/', views.reportar_pago, name='reportar_pago'),
+    path('admin/confirmar-pagos/', views.confirmar_pagos, name='confirmar_pagos'),
+
     # Empresas - CRUD (Solo Superusuarios)
     path('empresas/', views.empresas_list, name='empresas_list'),
     path('empresas/nueva/', views.empresa_create, name='empresa_create'),

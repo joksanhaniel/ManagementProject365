@@ -10,7 +10,8 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
     Cliente, Proveedor, Empleado, Proyecto, AsignacionEmpleado, Planilla,
-    DetallePlanilla, Gasto, Pago, Usuario, OrdenCambio, Deduccion, Empresa
+    DetallePlanilla, Gasto, Pago, Usuario, OrdenCambio, Deduccion, Empresa,
+    RegistroTrial, PagoRecibido
 )
 from .serializers import (
     ClienteSerializer, EmpleadoSerializer, ProyectoSerializer, ProyectoListSerializer,
@@ -20,10 +21,13 @@ from .serializers import (
 from .forms import (
     ClienteForm, ProveedorForm, EmpleadoForm, ProyectoForm, GastoForm, PlanillaForm,
     DetallePlanillaFormSet, DeduccionFormSet, BonificacionFormSet, HoraExtraFormSet,
-    UsuarioCreationForm, UsuarioUpdateForm
+    UsuarioCreationForm, UsuarioUpdateForm, RegistroPublicoForm
 )
 from .decorators import rol_requerido, permiso_escritura_requerido, permiso_financiero_requerido
 from django.contrib import messages
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ====== HELPER FUNCTIONS ======
@@ -35,6 +39,19 @@ def get_empresa_from_request(request):
     Si el usuario normal no tiene empresa, retorna None.
     """
     return getattr(request, 'empresa', None)
+
+
+def get_client_ip(request):
+    """
+    Obtiene la dirección IP del cliente, manejando proxies y load balancers.
+    """
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        # Si hay múltiples IPs (proxy chain), tomar la primera (IP del cliente real)
+        ip = x_forwarded_for.split(',')[0].strip()
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
 
 
 # ====== VISTAS HTML (Templates) ======
@@ -123,9 +140,86 @@ def dashboard(request, empresa_codigo=None):
             'utilidad_total': utilidad_total,
         }
 
+    # Calcular alertas de suscripción
+    from datetime import date
+    alerta_suscripcion = None
+
+    if empresa:
+        hoy = date.today()
+
+        # Verificar si la suscripción está vencida
+        if empresa.estado_suscripcion == 'vencida':
+            dias_vencidos = (hoy - empresa.fecha_expiracion_suscripcion).days if empresa.fecha_expiracion_suscripcion else 0
+            alerta_suscripcion = {
+                'tipo': 'danger',
+                'icono': 'fas fa-exclamation-triangle',
+                'titulo': '¡Suscripción Vencida!',
+                'mensaje': f'Tu suscripción venció hace {dias_vencidos} día{"s" if dias_vencidos != 1 else ""}. Renueva ahora para continuar usando MPP365.',
+                'boton_texto': 'Renovar Ahora',
+                'boton_url': f'/{empresa.codigo}/renovar-licencia/',
+                'urgente': True
+            }
+        # Verificar si está en trial
+        elif empresa.estado_suscripcion == 'trial' and empresa.fecha_expiracion_suscripcion:
+            dias_restantes = (empresa.fecha_expiracion_suscripcion - hoy).days
+            if dias_restantes <= 0:
+                alerta_suscripcion = {
+                    'tipo': 'danger',
+                    'icono': 'fas fa-exclamation-triangle',
+                    'titulo': '¡Trial Vencido!',
+                    'mensaje': 'Tu período de prueba ha terminado. Activa tu suscripción para continuar.',
+                    'boton_texto': 'Activar Suscripción',
+                    'boton_url': f'/{empresa.codigo}/renovar-licencia/',
+                    'urgente': True
+                }
+            elif dias_restantes <= 3:
+                alerta_suscripcion = {
+                    'tipo': 'warning',
+                    'icono': 'fas fa-clock',
+                    'titulo': '¡Trial por Vencer!',
+                    'mensaje': f'Tu período de prueba termina en {dias_restantes} día{"s" if dias_restantes != 1 else ""}. Activa tu suscripción ahora.',
+                    'boton_texto': 'Ver Planes',
+                    'boton_url': f'/{empresa.codigo}/renovar-licencia/',
+                    'urgente': True
+                }
+        # Verificar si la suscripción activa está por vencer
+        elif empresa.estado_suscripcion == 'activa' and empresa.fecha_expiracion_suscripcion:
+            dias_restantes = (empresa.fecha_expiracion_suscripcion - hoy).days
+            if dias_restantes <= 0:
+                alerta_suscripcion = {
+                    'tipo': 'danger',
+                    'icono': 'fas fa-exclamation-triangle',
+                    'titulo': '¡Suscripción Vencida!',
+                    'mensaje': 'Tu suscripción ha vencido. Renueva ahora para evitar la suspensión del servicio.',
+                    'boton_texto': 'Renovar Ahora',
+                    'boton_url': f'/{empresa.codigo}/renovar-licencia/',
+                    'urgente': True
+                }
+            elif dias_restantes <= 3:
+                alerta_suscripcion = {
+                    'tipo': 'danger',
+                    'icono': 'fas fa-exclamation-circle',
+                    'titulo': '¡Suscripción por Vencer!',
+                    'mensaje': f'Tu suscripción vence en {dias_restantes} día{"s" if dias_restantes != 1 else ""}. Renueva ahora para evitar interrupciones.',
+                    'boton_texto': 'Renovar Ahora',
+                    'boton_url': f'/{empresa.codigo}/renovar-licencia/',
+                    'urgente': True
+                }
+            elif dias_restantes <= 7:
+                alerta_suscripcion = {
+                    'tipo': 'warning',
+                    'icono': 'fas fa-info-circle',
+                    'titulo': 'Renovación Próxima',
+                    'mensaje': f'Tu suscripción vence en {dias_restantes} días. Renueva anticipadamente y evita contratiempos.',
+                    'boton_texto': 'Renovar',
+                    'boton_url': f'/{empresa.codigo}/renovar-licencia/',
+                    'urgente': False
+                }
+
     return render(request, 'proyectos/dashboard.html', {
         'stats': stats,
         'proyectos': proyectos_data,
+        'alerta_suscripcion': alerta_suscripcion,
     })
 
 
@@ -1185,11 +1279,16 @@ def usuarios_list(request, empresa_codigo=None):
     # Datos para filtros
     roles = Usuario.ROL_CHOICES
 
+    # Verificar si está en trial (para ocultar botón crear usuario)
+    empresa = get_empresa_from_request(request)
+    es_trial = empresa and empresa.tipo_suscripcion == 'trial' if not request.user.is_superuser else False
+
     return render(request, 'proyectos/usuarios_list.html', {
         'usuarios': usuarios,
         'roles': roles,
         'filtro_rol': rol,
         'filtro_is_active': is_active,
+        'es_trial': es_trial,
     })
 
 
@@ -1202,6 +1301,15 @@ def usuario_create(request, empresa_codigo=None):
         return redirect('dashboard', empresa_codigo=request.empresa.codigo if request.empresa else 'default')
 
     empresa = get_empresa_from_request(request)
+
+    # RESTRICCIÓN TRIAL: No permitir crear más usuarios durante el trial
+    if empresa and empresa.tipo_suscripcion == 'trial' and not request.user.is_superuser:
+        messages.error(request,
+            'No puedes crear más usuarios durante el período de prueba. '
+            'El trial incluye solo 1 usuario (el administrador). '
+            'Suscríbete a un plan para crear usuarios ilimitados.'
+        )
+        return redirect('usuarios_list', empresa_codigo=empresa.codigo)
 
     if request.method == 'POST':
         form = UsuarioCreationForm(request.POST)
@@ -1919,5 +2027,284 @@ def get_maquinaria_datos(request, pk, empresa_codigo=None):
             'success': False,
             'error': 'Maquinaria no encontrada'
         }, status=404)
+
+
+# ====== VISTAS DE SUSCRIPCIONES SaaS ======
+
+def registro_publico(request):
+    """
+    Vista pública para registro de nuevas empresas con trial de 15 días
+    Incluye protección contra abuso de trials mediante validación de IP y emails
+    """
+    if request.method == 'POST':
+        form = RegistroPublicoForm(request.POST)
+        if form.is_valid():
+            # Obtener IP del cliente
+            ip_address = get_client_ip(request)
+
+            # Validar que se puede permitir el registro (anti-abuso de trials)
+            puede_registrar, mensaje_error = RegistroTrial.validar_nuevo_registro(
+                ip_address=ip_address,
+                email_empresa=form.cleaned_data['email_empresa'],
+                email_usuario=form.cleaned_data['email_usuario']
+            )
+
+            if not puede_registrar:
+                messages.error(request, mensaje_error)
+                return render(request, 'proyectos/registro_publico.html', {'form': form})
+
+            try:
+                # Capturar plan elegido desde el parámetro GET
+                plan_elegido = request.GET.get('plan', '')
+
+                # Crear la empresa
+                empresa = Empresa.objects.create(
+                    nombre=form.cleaned_data['nombre_empresa'],
+                    razon_social=form.cleaned_data['razon_social'],
+                    rtn=form.cleaned_data['rtn'],
+                    telefono=form.cleaned_data['telefono_empresa'],
+                    email=form.cleaned_data['email_empresa'],
+                    direccion=form.cleaned_data.get('direccion_empresa', ''),
+                    ip_registro=ip_address,  # Guardar IP de registro
+                    plan_elegido=plan_elegido if plan_elegido != 'trial' else '',  # Guardar plan elegido (no guardar 'trial')
+                    activa=True
+                )
+
+                # Iniciar período de trial (15 días) - SIEMPRE con todos los módulos
+                empresa.iniciar_trial()
+
+                # Crear usuario administrador
+                usuario = Usuario.objects.create_user(
+                    username=form.cleaned_data['username'],
+                    email=form.cleaned_data['email_usuario'],
+                    password=form.cleaned_data['password1'],
+                    first_name=form.cleaned_data['first_name'],
+                    last_name=form.cleaned_data['last_name'],
+                    telefono=form.cleaned_data['telefono_usuario'],
+                    rol='gerente',
+                    empresa=empresa,
+                    is_active=True
+                )
+
+                # Registrar el trial para tracking y prevención de abusos
+                RegistroTrial.objects.create(
+                    ip_address=ip_address,
+                    email_empresa=form.cleaned_data['email_empresa'],
+                    email_usuario=form.cleaned_data['email_usuario'],
+                    rtn=form.cleaned_data['rtn'],
+                    empresa_creada=empresa
+                )
+
+                # Login automático
+                from django.contrib.auth import login
+                login(request, usuario)
+
+                messages.success(request, f'¡Bienvenido a MPP365! Tu cuenta ha sido creada exitosamente. Tienes 15 días de trial gratis para probar el sistema.')
+
+                # Redirigir al dashboard de la empresa
+                return redirect('dashboard', empresa_codigo=empresa.codigo)
+
+            except Exception as e:
+                messages.error(request, f'Error al crear la cuenta: {str(e)}')
+                logger.error(f'Error en registro público: {e}')
+    else:
+        form = RegistroPublicoForm()
+
+    # Capturar plan elegido para mostrarlo en el template
+    plan_elegido = request.GET.get('plan', '')
+
+    return render(request, 'proyectos/registro_publico.html', {
+        'form': form,
+        'plan_elegido': plan_elegido,
+    })
+
+
+@login_required
+def renovar_licencia(request, empresa_codigo):
+    """
+    Vista para renovación de licencia (cuando vence el trial o suscripción)
+    """
+    empresa = get_object_or_404(Empresa, codigo=empresa_codigo)
+
+    # Verificar que el usuario tenga acceso a esta empresa
+    if not request.user.is_superuser and request.user.empresa != empresa:
+        messages.error(request, 'No tienes permiso para acceder a esta empresa.')
+        return redirect('login')
+
+    # Obtener planes disponibles
+    from .models import Plan
+    planes = Plan.objects.filter(activo=True).order_by('tipo', 'precio')
+
+    # Importar configuración de pagos
+    from .config_pagos import CONTACTO_PAGOS, CUENTAS_BANCARIAS, INSTRUCCIONES_PAGO
+
+    if request.method == 'POST':
+        # Crear registro de pago pendiente
+        from .models import HistorialPago
+        plan_id = request.POST.get('plan_id')
+        metodo_pago = request.POST.get('metodo_pago')
+        numero_referencia = request.POST.get('numero_referencia', '')
+        fecha_pago = request.POST.get('fecha_pago')
+        comprobante = request.FILES.get('comprobante')
+
+        try:
+            plan = Plan.objects.get(id=plan_id)
+
+            pago = HistorialPago.objects.create(
+                empresa=empresa,
+                plan=plan,
+                monto=plan.precio,
+                metodo_pago=metodo_pago,
+                numero_referencia=numero_referencia,
+                fecha_pago=fecha_pago,
+                comprobante=comprobante,
+                estado='pendiente'
+            )
+
+            messages.success(request,
+                '¡Solicitud de pago registrada! Verificaremos tu comprobante en menos de 24 horas. '
+                'Recibirás un email cuando tu suscripción sea activada.')
+
+            return redirect('dashboard', empresa_codigo=empresa.codigo)
+
+        except Exception as e:
+            messages.error(request, f'Error al registrar el pago: {str(e)}')
+            logger.error(f'Error al registrar pago: {e}')
+
+    context = {
+        'empresa': empresa,
+        'planes': planes,
+        'contacto': CONTACTO_PAGOS,
+        'cuentas': CUENTAS_BANCARIAS,
+        'instrucciones': INSTRUCCIONES_PAGO,
+        'dias_restantes': empresa.dias_restantes(),
+        'esta_en_trial': empresa.esta_en_trial(),
+        'suscripcion_vencida': empresa.suscripcion_vencida(),
+        'cuota_instalacion_pagada': empresa.cuota_instalacion_pagada,
+    }
+
+    return render(request, 'proyectos/renovar_licencia.html', context)
+
+
+def terminos_condiciones(request):
+    """Vista pública para mostrar términos y condiciones"""
+    return render(request, 'proyectos/terminos_condiciones.html')
+
+
+def landing(request):
+    """Landing page principal con planes y precios"""
+    return render(request, 'proyectos/landing.html')
+
+
+@login_required
+def confirmar_pagos(request):
+    """
+    Vista simple para que el administrador confirme pagos recibidos.
+    Solo accesible para superusuarios.
+    """
+    # Verificar que sea superusuario
+    if not request.user.is_superuser:
+        messages.error(request, 'No tienes permiso para acceder a esta página.')
+        return redirect('dashboard', empresa_codigo=request.user.empresa.codigo if request.user.empresa else '')
+
+    # Obtener pagos pendientes con el plan elegido de cada empresa
+    pagos_pendientes = PagoRecibido.objects.filter(estado='pendiente').select_related('empresa').order_by('-fecha_registro')
+
+    # Si es POST, confirmar o rechazar pago
+    if request.method == 'POST':
+        pago_id = request.POST.get('pago_id')
+        accion = request.POST.get('accion')  # 'confirmar' o 'rechazar'
+
+        pago = get_object_or_404(PagoRecibido, id=pago_id)
+
+        if accion == 'confirmar':
+            # Usar el plan_elegido de la empresa si no hay plan seleccionado en el pago
+            if not pago.plan_seleccionado and pago.empresa.plan_elegido:
+                pago.plan_seleccionado = pago.empresa.plan_elegido
+                pago.save()
+
+            if pago.confirmar_pago(usuario=request.user):
+                messages.success(request, f'Pago confirmado exitosamente para {pago.empresa.nombre}. Suscripción activada.')
+            else:
+                messages.warning(request, 'El pago ya estaba confirmado.')
+
+        elif accion == 'rechazar':
+            motivo = request.POST.get('motivo', 'No especificado')
+            pago.rechazar_pago(motivo=motivo, usuario=request.user)
+            messages.info(request, f'Pago rechazado para {pago.empresa.nombre}.')
+
+        return redirect('confirmar_pagos_global')
+
+    # Importar configuración de planes para mostrar información
+    from .config_pagos import PLANES_PRECIOS
+
+    return render(request, 'proyectos/confirmar_pagos.html', {
+        'pagos_pendientes': pagos_pendientes,
+        'planes': PLANES_PRECIOS,
+    })
+
+
+@login_required
+def reportar_pago(request, empresa_codigo):
+    """
+    Vista para que los clientes reporten sus pagos realizados.
+    Pueden subir el comprobante y la información del pago.
+    """
+    empresa_actual = get_object_or_404(Empresa, codigo=empresa_codigo)
+
+    # Verificar que el usuario pertenezca a esta empresa
+    if not request.user.is_superuser and request.user.empresa != empresa_actual:
+        messages.error(request, 'No tienes permiso para acceder a esta empresa.')
+        return redirect('dashboard', empresa_codigo=request.user.empresa.codigo if request.user.empresa else '')
+
+    from .forms import ReportarPagoForm
+    from datetime import date
+
+    if request.method == 'POST':
+        form = ReportarPagoForm(request.POST, request.FILES, empresa=empresa_actual)
+        if form.is_valid():
+            pago = form.save(commit=False)
+            pago.empresa = empresa_actual
+            pago.estado = 'pendiente'  # Siempre pendiente hasta que admin confirme
+            pago.save()
+
+            messages.success(
+                request,
+                '¡Pago registrado exitosamente! '
+                'Tu pago será revisado y confirmado en las próximas 24 horas. '
+                'Recibirás una notificación cuando sea activado.'
+            )
+            return redirect('renovar_licencia', empresa_codigo=empresa_codigo)
+        else:
+            messages.error(request, 'Por favor corrige los errores en el formulario.')
+    else:
+        # Pre-llenar el formulario con datos sugeridos
+        initial_data = {
+            'fecha_pago': date.today(),
+        }
+
+        # Si la empresa tiene un plan elegido, pre-seleccionarlo
+        if empresa_actual.plan_elegido:
+            # Si ya pagó activación, usar plan de renovación (sin "_nuevo")
+            if empresa_actual.cuota_instalacion_pagada:
+                # Convertir plan de "nuevo" a renovación
+                plan_renovacion = empresa_actual.plan_elegido.replace('_nuevo', '')
+                initial_data['plan_seleccionado'] = plan_renovacion
+            else:
+                # Cliente nuevo, usar plan con activación
+                initial_data['plan_seleccionado'] = empresa_actual.plan_elegido
+
+            # Sugerir el monto según el plan
+            from .config_pagos import PLANES_PRECIOS
+            plan_info = PLANES_PRECIOS.get(initial_data['plan_seleccionado'], {})
+            if plan_info:
+                initial_data['monto'] = plan_info.get('precio', 0)
+
+        form = ReportarPagoForm(initial=initial_data, empresa=empresa_actual)
+
+    return render(request, 'proyectos/reportar_pago.html', {
+        'form': form,
+        'empresa_actual': empresa_actual,
+    })
 
 

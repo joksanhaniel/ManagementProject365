@@ -1,0 +1,85 @@
+{% extends 'proyectos/base.html' %}
+{% load static %}
+
+{% block title %}Actualización de Plan Requerida - Multi Project Pro 365{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-warning shadow-lg">
+                <div class="card-header bg-warning text-dark text-center py-4">
+                    <i class="fas fa-lock fa-3x mb-3"></i>
+                    <h2 class="mb-0">Módulo No Disponible en Tu Plan</h2>
+                </div>
+                <div class="card-body p-5">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <div class="text-center mb-4">
+                        <h4 class="text-muted">{{ modulo_requerido }}</h4>
+                        <p class="lead">Este módulo solo está disponible en el <strong>{{ plan_requerido }}</strong></p>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Tu Plan Actual</h5>
+                                    <h3 class="text-primary">{{ plan_actual }}</h3>
+                                    <p class="text-muted small">Gestión de proyectos, empleados, planillas y gastos</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 border-success">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">{{ plan_requerido }}</h5>
+                                    <h3 class="text-success">+L. {{ diferencia_precio }}/mes</h3>
+                                    <p class="text-muted small">Incluye gestión de maquinaria y equipos</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-star"></i> Qué incluye el {{ plan_requerido }}:</h5>
+                        <ul class="mb-0">
+                            <li><i class="fas fa-check text-success"></i> <strong>Todo lo de tu plan actual</strong> (proyectos, empleados, planillas, gastos)</li>
+                            <li><i class="fas fa-check text-success"></i> <strong>Catálogo de maquinaria</strong> con control de horómetros</li>
+                            <li><i class="fas fa-check text-success"></i> <strong>Registro de uso de maquinaria</strong> en proyectos</li>
+                            <li><i class="fas fa-check text-success"></i> <strong>Cálculo automático de costos</strong> por uso de maquinaria</li>
+                            <li><i class="fas fa-check text-success"></i> <strong>Historial de tarifas</strong> de maquinaria</li>
+                            <li><i class="fas fa-check text-success"></i> <strong>Reportes de utilización</strong> de equipos</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{% url 'renovar_licencia' empresa_codigo=empresa_actual.codigo %}" class="btn btn-success btn-lg">
+                            <i class="fas fa-arrow-up"></i> Actualizar a {{ plan_requerido }}
+                        </a>
+                        <a href="{% url 'dashboard' empresa_codigo=empresa_actual.codigo %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Volver al Dashboard
+                        </a>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <p class="text-muted">
+                            <i class="fas fa-headset"></i> ¿Necesitas ayuda? Contáctanos por WhatsApp:
+                            <a href="https://wa.me/50495206618?text=Hola,%20necesito%20información%20sobre%20actualizar%20a%20Plan%20Completo" target="_blank" class="text-decoration-none">
+                                <i class="fab fa-whatsapp"></i> +504 9520-6618
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

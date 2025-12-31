@@ -87,6 +87,74 @@ class Empresa(models.Model):
     fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Creación')
     fecha_modificacion = models.DateTimeField(auto_now=True, verbose_name='Última Modificación')
 
+    # Campos de Suscripción SaaS
+    TIPO_SUSCRIPCION_CHOICES = [
+        ('trial', 'Trial (15 días gratis)'),
+        ('mensual', 'Plan Mensual'),
+        ('anual', 'Plan Anual'),
+    ]
+
+    ESTADO_SUSCRIPCION_CHOICES = [
+        ('trial', 'En Trial'),
+        ('activa', 'Activa'),
+        ('vencida', 'Vencida'),
+        ('cancelada', 'Cancelada'),
+    ]
+
+    tipo_suscripcion = models.CharField(
+        max_length=20,
+        choices=TIPO_SUSCRIPCION_CHOICES,
+        default='trial',
+        verbose_name='Tipo de Suscripción'
+    )
+    estado_suscripcion = models.CharField(
+        max_length=20,
+        choices=ESTADO_SUSCRIPCION_CHOICES,
+        default='trial',
+        verbose_name='Estado de Suscripción'
+    )
+    fecha_inicio_suscripcion = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name='Fecha Inicio de Suscripción'
+    )
+    fecha_expiracion_suscripcion = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name='Fecha de Expiración'
+    )
+    cuota_instalacion_pagada = models.BooleanField(
+        default=False,
+        verbose_name='Cuota de Instalación Pagada'
+    )
+    plan_incluye_maquinaria = models.BooleanField(
+        default=True,
+        verbose_name='Plan Incluye Módulo de Maquinaria',
+        help_text='Plan Completo incluye gestión de maquinaria. Plan Básico no incluye este módulo.'
+    )
+    plan_elegido = models.CharField(
+        max_length=30,
+        blank=True,
+        verbose_name='Plan Elegido al Registrarse',
+        help_text='Plan que el cliente seleccionó al momento del registro (se activa cuando paga)',
+        choices=[
+            ('mensual_nuevo_basico', 'Plan Mensual Básico'),
+            ('anual_1_nuevo_basico', 'Plan Anual Básico (1 año)'),
+            ('anual_2_nuevo_basico', 'Plan Bianual Básico (2 años)'),
+            ('mensual_nuevo_completo', 'Plan Mensual Completo'),
+            ('anual_1_nuevo_completo', 'Plan Anual Completo (1 año)'),
+            ('anual_2_nuevo_completo', 'Plan Bianual Completo (2 años)'),
+        ]
+    )
+
+    # Campos de seguridad para prevenir abuso de trials
+    ip_registro = models.GenericIPAddressField(
+        blank=True,
+        null=True,
+        verbose_name='IP de Registro',
+        help_text='IP desde donde se registró la empresa'
+    )
+
     class Meta:
         verbose_name = 'Empresa'
         verbose_name_plural = 'Empresas'
@@ -118,6 +186,212 @@ class Empresa(models.Model):
     def get_url_prefix(self):
         """Retorna el prefijo de URL para esta empresa"""
         return self.codigo
+
+    def iniciar_trial(self):
+        """
+        Inicia el período de trial de 15 días.
+        El trial SIEMPRE incluye TODOS los módulos (incluyendo maquinaria)
+        para que el cliente pueda probar el sistema completo.
+        """
+        from datetime import date, timedelta
+        self.tipo_suscripcion = 'trial'
+        self.estado_suscripcion = 'trial'
+        self.fecha_inicio_suscripcion = date.today()
+        self.fecha_expiracion_suscripcion = date.today() + timedelta(days=15)
+        self.plan_incluye_maquinaria = True  # Trial SIEMPRE con todos los módulos
+        self.save()
+
+    def activar_suscripcion(self, tipo='mensual', duracion_dias=30):
+        """
+        Activa una suscripción pagada
+        tipo: 'mensual', 'anual'
+        duracion_dias: días de duración (30 para mensual, 330 para anual 11 meses, 690 para bianual 23 meses)
+        """
+        from datetime import date, timedelta
+        self.tipo_suscripcion = tipo
+        self.estado_suscripcion = 'activa'
+        self.fecha_inicio_suscripcion = date.today()
+        self.fecha_expiracion_suscripcion = date.today() + timedelta(days=duracion_dias)
+        self.save()
+
+    def esta_en_trial(self):
+        """Verifica si la empresa está en período de trial"""
+        return self.estado_suscripcion == 'trial'
+
+    def suscripcion_activa(self):
+        """Verifica si la suscripción está activa (trial o pagada)"""
+        from datetime import date
+        if not self.fecha_expiracion_suscripcion:
+            return False
+        return self.estado_suscripcion in ['trial', 'activa'] and self.fecha_expiracion_suscripcion >= date.today()
+
+    def suscripcion_vencida(self):
+        """Verifica si la suscripción está vencida"""
+        from datetime import date
+        if not self.fecha_expiracion_suscripcion:
+            return True
+        return self.fecha_expiracion_suscripcion < date.today()
+
+    def dias_restantes(self):
+        """Retorna los días restantes de la suscripción"""
+        from datetime import date
+        if not self.fecha_expiracion_suscripcion:
+            return 0
+        delta = self.fecha_expiracion_suscripcion - date.today()
+        return max(0, delta.days)
+
+    def puede_crear_registros(self):
+        """Verifica si la empresa puede crear nuevos registros (no está en trial o tiene suscripción activa)"""
+        return self.estado_suscripcion == 'activa' and self.suscripcion_activa()
+
+
+class Plan(models.Model):
+    """
+    Modelo para los planes de suscripción disponibles
+    """
+    TIPO_PLAN_CHOICES = [
+        ('setup', 'Cuota de Instalación (Una vez)'),
+        ('mensual', 'Plan Mensual'),
+        ('anual', 'Plan Anual'),
+    ]
+
+    nombre = models.CharField(max_length=100, verbose_name='Nombre del Plan')
+    tipo = models.CharField(max_length=20, choices=TIPO_PLAN_CHOICES, verbose_name='Tipo de Plan')
+    precio = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Precio (L.)')
+    descripcion = models.TextField(blank=True, null=True, verbose_name='Descripción')
+    activo = models.BooleanField(default=True, verbose_name='Plan Activo')
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Plan de Suscripción'
+        verbose_name_plural = 'Planes de Suscripción'
+        ordering = ['tipo', 'precio']
+
+    def __str__(self):
+        return f"{self.nombre} - L. {self.precio}"
+
+
+class HistorialPago(models.Model):
+    """
+    Modelo para registrar historial de pagos de suscripciones
+    """
+    METODO_PAGO_CHOICES = [
+        ('transferencia_bac', 'Transferencia BAC'),
+        ('transferencia_occidente', 'Transferencia Banco de Occidente'),
+        ('deposito_bac', 'Depósito en efectivo BAC'),
+        ('deposito_occidente', 'Depósito en efectivo Occidente'),
+        ('cheque', 'Cheque'),
+        ('otro', 'Otro'),
+    ]
+
+    ESTADO_PAGO_CHOICES = [
+        ('pendiente', 'Pendiente de Verificación'),
+        ('verificado', 'Verificado y Aprobado'),
+        ('rechazado', 'Rechazado'),
+    ]
+
+    empresa = models.ForeignKey('Empresa', on_delete=models.PROTECT, related_name='pagos', verbose_name='Empresa')
+    plan = models.ForeignKey('Plan', on_delete=models.PROTECT, verbose_name='Plan Pagado')
+    monto = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Monto Pagado (L.)')
+    metodo_pago = models.CharField(max_length=30, choices=METODO_PAGO_CHOICES, verbose_name='Método de Pago')
+    numero_referencia = models.CharField(max_length=100, blank=True, null=True, verbose_name='Número de Referencia/Comprobante')
+    comprobante = models.ImageField(upload_to='pagos/comprobantes/', blank=True, null=True, verbose_name='Comprobante de Pago')
+    estado = models.CharField(max_length=20, choices=ESTADO_PAGO_CHOICES, default='pendiente', verbose_name='Estado del Pago')
+    fecha_pago = models.DateField(verbose_name='Fecha del Pago')
+    fecha_registro = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Registro')
+    fecha_verificacion = models.DateTimeField(blank=True, null=True, verbose_name='Fecha de Verificación')
+    verificado_por = models.ForeignKey('Usuario', on_delete=models.SET_NULL, blank=True, null=True, verbose_name='Verificado por')
+    notas = models.TextField(blank=True, null=True, verbose_name='Notas')
+
+    class Meta:
+        verbose_name = 'Historial de Pago'
+        verbose_name_plural = 'Historial de Pagos'
+        ordering = ['-fecha_pago']
+
+    def __str__(self):
+        return f"{self.empresa.nombre} - {self.plan.nombre} - L. {self.monto} ({self.get_estado_display()})"
+
+
+class RegistroTrial(models.Model):
+    """
+    Modelo para rastrear registros de trials y prevenir abusos.
+    Permite detectar múltiples registros desde la misma IP o email.
+    """
+    ip_address = models.GenericIPAddressField(verbose_name='Dirección IP')
+    email_empresa = models.EmailField(verbose_name='Email de Empresa')
+    email_usuario = models.EmailField(verbose_name='Email de Usuario')
+    rtn = models.CharField(max_length=14, verbose_name='RTN')
+    empresa_creada = models.ForeignKey('Empresa', on_delete=models.CASCADE, blank=True, null=True, verbose_name='Empresa Creada')
+    fecha_registro = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Registro')
+    bloqueado = models.BooleanField(default=False, verbose_name='Bloqueado')
+    motivo_bloqueo = models.TextField(blank=True, null=True, verbose_name='Motivo de Bloqueo')
+
+    class Meta:
+        verbose_name = 'Registro de Trial'
+        verbose_name_plural = 'Registros de Trials'
+        ordering = ['-fecha_registro']
+        indexes = [
+            models.Index(fields=['ip_address']),
+            models.Index(fields=['email_empresa']),
+            models.Index(fields=['fecha_registro']),
+        ]
+
+    def __str__(self):
+        return f"{self.email_empresa} - {self.ip_address} ({self.fecha_registro.strftime('%d/%m/%Y %H:%M')})"
+
+    @staticmethod
+    def contar_registros_recientes_ip(ip_address, dias=30):
+        """Cuenta cuántos registros ha hecho esta IP en los últimos N días"""
+        from datetime import timedelta
+        from django.utils import timezone
+        fecha_limite = timezone.now() - timedelta(days=dias)
+        return RegistroTrial.objects.filter(
+            ip_address=ip_address,
+            fecha_registro__gte=fecha_limite
+        ).count()
+
+    @staticmethod
+    def contar_registros_recientes_email(email, dias=30):
+        """Cuenta cuántos registros ha hecho este email en los últimos N días"""
+        from datetime import timedelta
+        from django.utils import timezone
+        fecha_limite = timezone.now() - timedelta(days=dias)
+        return RegistroTrial.objects.filter(
+            models.Q(email_empresa=email) | models.Q(email_usuario=email),
+            fecha_registro__gte=fecha_limite
+        ).count()
+
+    @staticmethod
+    def esta_ip_bloqueada(ip_address):
+        """Verifica si esta IP está bloqueada"""
+        return RegistroTrial.objects.filter(ip_address=ip_address, bloqueado=True).exists()
+
+    @staticmethod
+    def validar_nuevo_registro(ip_address, email_empresa, email_usuario, limite_ip=3, limite_email=2):
+        """
+        Valida si se puede permitir un nuevo registro.
+        Retorna (puede_registrar, mensaje_error)
+        """
+        # Verificar si la IP está bloqueada
+        if RegistroTrial.esta_ip_bloqueada(ip_address):
+            return False, "Tu dirección IP ha sido bloqueada. Contacta al soporte."
+
+        # Verificar límite de registros por IP
+        registros_ip = RegistroTrial.contar_registros_recientes_ip(ip_address, dias=30)
+        if registros_ip >= limite_ip:
+            return False, f"Has excedido el límite de {limite_ip} registros de prueba por mes. Si necesitas ayuda, contáctanos."
+
+        # Verificar límite de registros por email de empresa
+        registros_email_empresa = RegistroTrial.contar_registros_recientes_email(email_empresa, dias=30)
+        if registros_email_empresa >= limite_email:
+            return False, "Este email ya ha sido usado para registros de prueba. Usa un email diferente o contacta al soporte."
+
+        # Verificar límite de registros por email de usuario
+        registros_email_usuario = RegistroTrial.contar_registros_recientes_email(email_usuario, dias=30)
+        if registros_email_usuario >= limite_email:
+            return False, "Este email ya ha sido usado para registros de prueba. Usa un email diferente o contacta al soporte."
+
+        return True, None
 
 
 class Cliente(models.Model):
@@ -1133,3 +1407,230 @@ class HistorialTarifaMaquinaria(models.Model):
             return f"{self.maquinaria.codigo}: L.{self.tarifa_anterior} → L.{self.tarifa_nueva} ({self.fecha_cambio.strftime('%d/%m/%Y')})"
         else:
             return f"{self.maquinaria.codigo}: Tarifa inicial L.{self.tarifa_nueva} ({self.fecha_cambio.strftime('%d/%m/%Y')})"
+
+
+def pago_comprobante_upload_path(instance, filename):
+    """
+    Genera la ruta de subida de comprobantes de pago, separando por empresa.
+
+    Estructura: pagos/<empresa_codigo>/<año>/<mes>/<filename>
+
+    Ejemplo: pagos/empresa1/2025/01/comprobante_bac_123.jpg
+    """
+    empresa_codigo = instance.empresa.codigo
+    fecha = instance.fecha_pago
+    año = fecha.year
+    mes = f"{fecha.month:02d}"
+
+    # Limpiar el nombre del archivo
+    nombre_base, extension = os.path.splitext(filename)
+    nombre_limpio = slugify(nombre_base)
+    filename_final = f"{nombre_limpio}{extension.lower()}"
+
+    return f'pagos/{empresa_codigo}/{año}/{mes}/{filename_final}'
+
+
+class PagoRecibido(models.Model):
+    """
+    Modelo para registrar pagos recibidos de empresas y gestionar la confirmación de suscripciones.
+    Los administradores pueden revisar y confirmar pagos desde el Django Admin.
+    """
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente de Confirmación'),
+        ('confirmado', 'Confirmado'),
+        ('rechazado', 'Rechazado'),
+    ]
+
+    METODO_PAGO_CHOICES = [
+        ('transferencia_bac', 'Transferencia BAC'),
+        ('transferencia_occidente', 'Transferencia Banco de Occidente'),
+        ('deposito_bac', 'Depósito BAC'),
+        ('deposito_occidente', 'Depósito Banco de Occidente'),
+        ('otro', 'Otro'),
+    ]
+
+    PLAN_CHOICES = [
+        # Planes Básicos
+        ('mensual_nuevo_basico', 'Plan Mensual Básico - Nuevo Cliente (L. 10,000)'),
+        ('anual_1_nuevo_basico', 'Plan Anual Básico 1 año - Nuevo Cliente (L. 28,700)'),
+        ('anual_2_nuevo_basico', 'Plan Bianual Básico 2 años - Nuevo Cliente (L. 49,100)'),
+        ('mensual_basico', 'Plan Mensual Básico - Renovación (L. 2,000)'),
+        ('anual_1_basico', 'Plan Anual Básico 1 año - Renovación (L. 18,700)'),
+        ('anual_2_basico', 'Plan Bianual Básico 2 años - Renovación (L. 39,100)'),
+
+        # Planes Completos
+        ('mensual_nuevo_completo', 'Plan Mensual Completo - Nuevo Cliente (L. 12,500)'),
+        ('anual_1_nuevo_completo', 'Plan Anual Completo 1 año - Nuevo Cliente (L. 33,375)'),
+        ('anual_2_nuevo_completo', 'Plan Bianual Completo 2 años - Nuevo Cliente (L. 58,875)'),
+        ('mensual_completo', 'Plan Mensual Completo - Renovación (L. 2,500)'),
+        ('anual_1_completo', 'Plan Anual Completo 1 año - Renovación (L. 23,375)'),
+        ('anual_2_completo', 'Plan Bianual Completo 2 años - Renovación (L. 48,875)'),
+    ]
+
+    # Información del pago
+    empresa = models.ForeignKey(
+        Empresa,
+        on_delete=models.CASCADE,
+        related_name='pagos_recibidos',
+        verbose_name='Empresa'
+    )
+    monto = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name='Monto Pagado'
+    )
+    fecha_pago = models.DateField(
+        verbose_name='Fecha del Pago',
+        help_text='Fecha en que se realizó la transferencia/depósito'
+    )
+    metodo_pago = models.CharField(
+        max_length=30,
+        choices=METODO_PAGO_CHOICES,
+        default='transferencia_bac',
+        verbose_name='Método de Pago'
+    )
+    plan_seleccionado = models.CharField(
+        max_length=30,
+        choices=PLAN_CHOICES,
+        verbose_name='Plan Seleccionado',
+        help_text='Plan que el cliente desea contratar'
+    )
+
+    # Comprobante
+    comprobante = models.FileField(
+        upload_to=pago_comprobante_upload_path,
+        blank=True,
+        null=True,
+        validators=[
+            validar_tamanio_archivo,
+            FileExtensionValidator(allowed_extensions=['pdf', 'jpg', 'jpeg', 'png'])
+        ],
+        verbose_name='Comprobante de Pago',
+        help_text='Adjuntar imagen o PDF del comprobante (máx. 10MB)'
+    )
+    referencia = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='Referencia/Número de Transacción',
+        help_text='Número de referencia del banco'
+    )
+
+    # Estado y gestión
+    estado = models.CharField(
+        max_length=20,
+        choices=ESTADO_CHOICES,
+        default='pendiente',
+        verbose_name='Estado'
+    )
+    notas_cliente = models.TextField(
+        blank=True,
+        verbose_name='Notas del Cliente',
+        help_text='Información adicional del cliente sobre el pago'
+    )
+    notas_admin = models.TextField(
+        blank=True,
+        verbose_name='Notas del Administrador',
+        help_text='Notas internas sobre la verificación del pago'
+    )
+
+    # Fechas de gestión
+    fecha_registro = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Fecha de Registro'
+    )
+    fecha_confirmacion = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='Fecha de Confirmación',
+        help_text='Fecha en que se confirmó el pago'
+    )
+    confirmado_por = models.ForeignKey(
+        'Usuario',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='pagos_confirmados',
+        verbose_name='Confirmado Por'
+    )
+
+    class Meta:
+        verbose_name = 'Pago Recibido'
+        verbose_name_plural = 'Pagos Recibidos'
+        ordering = ['-fecha_registro']
+
+    def __str__(self):
+        return f"{self.empresa.nombre} - L. {self.monto:,.2f} - {self.get_estado_display()}"
+
+    def confirmar_pago(self, usuario=None):
+        """
+        Confirma el pago y activa/renueva la suscripción de la empresa.
+        Actualiza automáticamente todos los campos necesarios según el plan seleccionado.
+        """
+        from datetime import date, timedelta
+        from .config_pagos import PLANES_PRECIOS
+
+        if self.estado == 'confirmado':
+            return False  # Ya está confirmado
+
+        # Obtener información del plan
+        plan_info = PLANES_PRECIOS.get(self.plan_seleccionado, {})
+
+        # Determinar tipo de plan y si incluye maquinaria
+        incluye_maquinaria = plan_info.get('incluye_maquinaria', True)
+
+        # Determinar duración en días según el plan
+        if 'anual_2' in self.plan_seleccionado or 'bianual' in self.plan_seleccionado:
+            # Bianual: 23 meses = 690 días
+            duracion_dias = 690
+            tipo_suscripcion = 'anual'
+        elif 'anual_1' in self.plan_seleccionado:
+            # Anual: 11 meses = 330 días
+            duracion_dias = 330
+            tipo_suscripcion = 'anual'
+        else:
+            # Mensual: 30 días
+            duracion_dias = 30
+            tipo_suscripcion = 'mensual'
+
+        # Actualizar empresa
+        self.empresa.tipo_suscripcion = tipo_suscripcion
+        self.empresa.estado_suscripcion = 'activa'
+        self.empresa.plan_incluye_maquinaria = incluye_maquinaria
+
+        # Si es nuevo cliente (plan con "nuevo" en el nombre), marcar cuota de instalación
+        if 'nuevo' in self.plan_seleccionado:
+            self.empresa.cuota_instalacion_pagada = True
+
+        # Calcular fechas de suscripción
+        # Si ya tiene suscripción activa, extender desde fecha de expiración
+        # Si no, o si está vencida, empezar desde hoy
+        if (self.empresa.fecha_expiracion_suscripcion and
+            self.empresa.fecha_expiracion_suscripcion >= date.today()):
+            # Extender desde la fecha de expiración actual
+            self.empresa.fecha_inicio_suscripcion = self.empresa.fecha_expiracion_suscripcion
+            self.empresa.fecha_expiracion_suscripcion = self.empresa.fecha_expiracion_suscripcion + timedelta(days=duracion_dias)
+        else:
+            # Empezar desde hoy
+            self.empresa.fecha_inicio_suscripcion = date.today()
+            self.empresa.fecha_expiracion_suscripcion = date.today() + timedelta(days=duracion_dias)
+
+        self.empresa.save()
+
+        # Actualizar estado del pago
+        self.estado = 'confirmado'
+        self.fecha_confirmacion = date.today()
+        if usuario:
+            self.confirmado_por = usuario
+        self.save()
+
+        return True
+
+    def rechazar_pago(self, motivo='', usuario=None):
+        """Rechaza el pago"""
+        self.estado = 'rechazado'
+        if motivo:
+            self.notas_admin = f"{self.notas_admin}\n\nRECHAZADO: {motivo}".strip()
+        if usuario:
+            self.confirmado_por = usuario
+        self.save()

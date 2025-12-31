@@ -54,6 +54,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'proyectos.middleware.EmpresaMiddleware',  # Middleware multiempresa
+    'proyectos.middleware.SuscripcionMiddleware',  # Middleware de suscripciones SaaS
+    'proyectos.middleware.MaquinariaAccessMiddleware',  # Middleware de acceso a módulo de maquinaria
 ]
 
 ROOT_URLCONF = 'mpp365_system.urls'
@@ -253,3 +255,17 @@ LOGGING = {
 
 # Crear directorio de logs si no existe
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+
+# ==================== EMAIL CONFIGURATION ====================
+# Configuración de email usando Gmail SMTP
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='joksanhaniel@gmail.com')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='MPP365 <joksanhaniel@gmail.com>')
+SERVER_EMAIL = config('SERVER_EMAIL', default='joksanhaniel@gmail.com')
+
+# Email para notificaciones de administrador
+ADMIN_EMAIL = 'joksanhaniel@gmail.com'

@@ -1,0 +1,676 @@
+{% extends 'proyectos/base.html' %}
+{% load static %}
+
+{% block title %}Renovar Licencia - MPP365{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pricing-card {
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+        height: 100%;
+        position: relative;
+    }
+    .pricing-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border-color: #667eea;
+    }
+    .pricing-card.featured {
+        border-color: #28a745;
+        background: linear-gradient(135deg, #f8fff9 0%, #f0fff4 100%);
+    }
+    .pricing-card.featured .badge {
+        background: #28a745;
+    }
+    .plan-badge {
+        position: absolute;
+        top: -15px;
+        right: 20px;
+        padding: 8px 20px;
+        border-radius: 20px;
+        color: white;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .plan-price {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #667eea;
+        margin: 20px 0;
+    }
+    .plan-price small {
+        font-size: 1rem;
+        color: #6c757d;
+    }
+    .savings-badge {
+        background: #28a745;
+        color: white;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        display: inline-block;
+        margin-top: 10px;
+    }
+    .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 20px 0;
+    }
+    .feature-list li {
+        padding: 10px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .feature-list li:last-child {
+        border-bottom: none;
+    }
+    .feature-list i {
+        color: #28a745;
+        margin-right: 10px;
+    }
+    .payment-info {
+        background: #f8f9fa;
+        border-left: 4px solid #667eea;
+        padding: 20px;
+        border-radius: 5px;
+        margin-top: 30px;
+    }
+    .bank-account {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        border: 1px solid #dee2e6;
+    }
+    .status-alert {
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    .expired-badge {
+        background: #dc3545;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-size: 1.1rem;
+        display: inline-block;
+    }
+    .trial-badge {
+        background: #ffc107;
+        color: #000;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-size: 1.1rem;
+        display: inline-block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="fas fa-sync-alt"></i> Renovar Licencia
+            </h2>
+
+            <!-- Estado Actual de Suscripción -->
+            {% if empresa_actual.estado_suscripcion == 'vencida' %}
+                <div class="alert alert-danger status-alert">
+                    <h4><i class="fas fa-exclamation-triangle"></i> Suscripción Vencida</h4>
+                    <p class="mb-2">Tu suscripción expiró el {{ empresa_actual.fecha_expiracion_suscripcion|date:"d/m/Y" }}.</p>
+                    <p class="mb-0">Para continuar usando el sistema, renueva tu licencia seleccionando un plan a continuación.</p>
+                </div>
+            {% elif empresa_actual.estado_suscripcion == 'trial' %}
+                <div class="alert alert-warning status-alert">
+                    <h4><i class="fas fa-clock"></i> Período de Prueba</h4>
+                    <p class="mb-2">Te quedan <strong>{{ dias_restantes }} días</strong> de prueba gratuita.</p>
+                    <p class="mb-0">Tu trial expira el {{ empresa_actual.fecha_expiracion_suscripcion|date:"d/m/Y" }}. Selecciona un plan para continuar sin interrupciones.</p>
+                </div>
+            {% else %}
+                <div class="alert alert-info status-alert">
+                    <h4><i class="fas fa-info-circle"></i> Suscripción Activa</h4>
+                    <p class="mb-2">Tu suscripción {{ tipo_suscripcion }} está activa hasta el {{ empresa_actual.fecha_expiracion_suscripcion|date:"d/m/Y" }}.</p>
+                    <p class="mb-0">Puedes renovar anticipadamente para extender tu período de servicio.</p>
+                </div>
+            {% endif %}
+
+            <!-- Plan Elegido Originalmente -->
+            {% if empresa_actual.plan_elegido and empresa_actual.estado_suscripcion == 'trial' %}
+            <div class="alert alert-success mt-4" style="border-left: 5px solid #28a745;">
+                <h5><i class="fas fa-star"></i> Tu Plan Elegido</h5>
+                <p class="mb-2">Al registrarte seleccionaste: <strong>{{ empresa_actual.get_plan_elegido_display }}</strong></p>
+                <div class="d-flex gap-3 align-items-center mt-3">
+                    <button type="button" class="btn btn-success" onclick="scrollToPlanElegido()">
+                        <i class="fas fa-check-circle"></i> Proceder con este plan
+                    </button>
+                    <span class="text-muted">o cambia de plan abajo (perderás el trial si cambias)</span>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Planes de Suscripción -->
+            {% if not empresa_actual.cuota_instalacion_pagada %}
+            <div class="alert alert-info mt-4">
+                <h5><i class="fas fa-info-circle"></i> Primera Suscripción</h5>
+                <p class="mb-2">Como es tu primera vez en MPP365, los precios incluyen:</p>
+                <ul class="mb-0">
+                    <li><strong>Cuota de Activación:</strong> L. 10,000 (incluye configuración y activación de tu cuenta)</li>
+                    <li><strong>Primer Mes Gratis:</strong> Acceso completo e ilimitado por 1 mes</li>
+                    <li><strong>Planes Anuales y Bianuales:</strong> 15% de descuento en todos los planes</li>
+                    <li><strong>Meses Adicionales:</strong> Según el plan que selecciones</li>
+                </ul>
+            </div>
+            <h3 class="mt-5 mb-4 text-center">Planes Disponibles para Nuevos Clientes</h3>
+            {% else %}
+            <h3 class="mt-5 mb-4 text-center">Planes Disponibles</h3>
+            {% endif %}
+
+            <!-- PLANES BÁSICOS -->
+            <h4 class="text-center mt-4 mb-4 text-muted">
+                <i class="fas fa-layer-group"></i> Planes Básicos
+                <small class="d-block mt-2" style="font-size: 0.9rem;">Gestión de proyectos, empleados, planillas y gastos</small>
+            </h4>
+            <div class="row">
+                <!-- Plan Mensual Básico -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="pricing-card {% if empresa_actual.plan_elegido == 'mensual_nuevo_basico' %}featured{% endif %}" id="plan-mensual_nuevo_basico">
+                        <span class="plan-badge" style="background: #6c757d;">BÁSICO</span>
+                        {% if empresa_actual.plan_elegido == 'mensual_nuevo_basico' %}
+                        <div class="text-center mb-2">
+                            <span class="badge bg-success">✓ TU PLAN ELEGIDO</span>
+                        </div>
+                        {% endif %}
+                        <h4 class="text-center mt-3">Mensual Básico</h4>
+                        <div class="text-center">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <div class="plan-price">
+                                L. 10,000
+                                <small>/ pago inicial</small>
+                            </div>
+                            <p class="text-muted mb-0"><small>Activación + Mes 1 Gratis</small></p>
+                            <p class="text-muted"><small><strong>Luego L. 2,000/mes</strong></small></p>
+                            {% else %}
+                            <div class="plan-price">
+                                L. 2,000
+                                <small>/mes</small>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <ul class="feature-list">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <li><i class="fas fa-rocket"></i> <strong>Activación y configuración</strong></li>
+                            <li><i class="fas fa-star" style="color: #ffc107;"></i> <strong>Primer mes GRATIS</strong></li>
+                            {% endif %}
+                            <li><i class="fas fa-check"></i> <strong>Usuarios ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Proyectos ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Empleados, planillas, gastos</strong></li>
+                            <li><i class="fas fa-times text-muted"></i> <del>Gestión de maquinaria</del></li>
+                            <li><i class="fas fa-check"></i> Soporte por WhatsApp</li>
+                        </ul>
+                        <button type="button" class="btn btn-outline-secondary w-100 mt-3"
+                                onclick="mostrarPago('mensual_basico', {% if not empresa_actual.cuota_instalacion_pagada %}10000{% else %}2000{% endif %})">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <i class="fas fa-shopping-cart"></i> Pagar L. 10,000
+                            {% else %}
+                            Seleccionar Plan
+                            {% endif %}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Plan Anual 1 año Básico -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="pricing-card {% if empresa_actual.plan_elegido == 'anual_1_nuevo_basico' %}featured{% endif %}" id="plan-anual_1_nuevo_basico">
+                        <span class="plan-badge" style="background: #6c757d;">BÁSICO</span>
+                        {% if empresa_actual.plan_elegido == 'anual_1_nuevo_basico' %}
+                        <div class="text-center mb-2">
+                            <span class="badge bg-success">✓ TU PLAN ELEGIDO</span>
+                        </div>
+                        {% endif %}
+                        <h4 class="text-center mt-3">Anual Básico (1 año)</h4>
+                        <div class="text-center">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <div class="plan-price">
+                                L. 28,700
+                                <small>/ pago único</small>
+                            </div>
+                            <p class="text-muted mb-0"><small>L. 1,700/mes x 11 meses + mes 1 gratis</small></p>
+                            <div class="savings-badge">
+                                <i class="fas fa-piggy-bank"></i> Ahorra L. 3,300
+                            </div>
+                            {% else %}
+                            <div class="plan-price">
+                                L. 18,700
+                                <small>/ 11 meses</small>
+                            </div>
+                            <p class="text-muted">L. 1,700/mes</p>
+                            <div class="savings-badge">
+                                <i class="fas fa-piggy-bank"></i> Ahorra L. 3,300
+                            </div>
+                            {% endif %}
+                        </div>
+                        <ul class="feature-list">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <li><i class="fas fa-rocket"></i> <strong>Activación y configuración</strong></li>
+                            <li><i class="fas fa-star" style="color: #ffc107;"></i> <strong>Primer mes GRATIS</strong></li>
+                            {% endif %}
+                            <li><i class="fas fa-check"></i> <strong>Usuarios ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Proyectos ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Empleados, planillas, gastos</strong></li>
+                            <li><i class="fas fa-times text-muted"></i> <del>Gestión de maquinaria</del></li>
+                            <li><i class="fas fa-check"></i> Soporte por WhatsApp</li>
+                        </ul>
+                        <button type="button" class="btn btn-outline-secondary w-100 mt-3"
+                                onclick="mostrarPago('anual_1_basico', {% if not empresa_actual.cuota_instalacion_pagada %}28700{% else %}18700{% endif %})">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <i class="fas fa-shopping-cart"></i> Pagar L. 28,700
+                            {% else %}
+                            Seleccionar Plan
+                            {% endif %}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Plan Bianual 2 años Básico -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="pricing-card {% if empresa_actual.plan_elegido == 'anual_2_nuevo_basico' %}featured{% endif %}" id="plan-anual_2_nuevo_basico">
+                        <span class="plan-badge" style="background: #6c757d;">BÁSICO</span>
+                        {% if empresa_actual.plan_elegido == 'anual_2_nuevo_basico' %}
+                        <div class="text-center mb-2">
+                            <span class="badge bg-success">✓ TU PLAN ELEGIDO</span>
+                        </div>
+                        {% endif %}
+                        <h4 class="text-center mt-3">Bianual Básico (2 años)</h4>
+                        <div class="text-center">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <div class="plan-price">
+                                L. 49,100
+                                <small>/ pago único</small>
+                            </div>
+                            <p class="text-muted mb-0"><small>L. 1,700/mes x 23 meses + mes 1 gratis</small></p>
+                            <div class="savings-badge">
+                                <i class="fas fa-piggy-bank"></i> Ahorra L. 6,900
+                            </div>
+                            {% else %}
+                            <div class="plan-price">
+                                L. 39,100
+                                <small>/ 23 meses</small>
+                            </div>
+                            <p class="text-muted">L. 1,700/mes</p>
+                            <div class="savings-badge">
+                                <i class="fas fa-piggy-bank"></i> Ahorra L. 6,900
+                            </div>
+                            {% endif %}
+                        </div>
+                        <ul class="feature-list">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <li><i class="fas fa-rocket"></i> <strong>Activación y configuración</strong></li>
+                            <li><i class="fas fa-star" style="color: #ffc107;"></i> <strong>Primer mes GRATIS</strong></li>
+                            {% endif %}
+                            <li><i class="fas fa-check"></i> <strong>Usuarios ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Proyectos ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Empleados, planillas, gastos</strong></li>
+                            <li><i class="fas fa-times text-muted"></i> <del>Gestión de maquinaria</del></li>
+                            <li><i class="fas fa-check"></i> Soporte por WhatsApp</li>
+                        </ul>
+                        <button type="button" class="btn btn-outline-secondary w-100 mt-3"
+                                onclick="mostrarPago('anual_2_basico', {% if not empresa_actual.cuota_instalacion_pagada %}49100{% else %}39100{% endif %})">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <i class="fas fa-shopping-cart"></i> Pagar L. 49,100
+                            {% else %}
+                            Seleccionar Plan
+                            {% endif %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PLANES COMPLETOS -->
+            <h4 class="text-center mt-5 mb-4 text-success">
+                <i class="fas fa-star"></i> Planes Completos
+                <small class="d-block mt-2" style="font-size: 0.9rem;">Todo lo anterior + Gestión de maquinaria y equipos</small>
+            </h4>
+            <div class="row">
+                <!-- Plan Mensual Completo -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="pricing-card {% if empresa_actual.plan_elegido == 'mensual_nuevo_completo' %}featured{% endif %}" id="plan-mensual_nuevo_completo">
+                        <span class="plan-badge" style="background: #28a745;">COMPLETO</span>
+                        {% if empresa_actual.plan_elegido == 'mensual_nuevo_completo' %}
+                        <div class="text-center mb-2">
+                            <span class="badge bg-success">✓ TU PLAN ELEGIDO</span>
+                        </div>
+                        {% endif %}
+                        <h4 class="text-center mt-3">Mensual Completo</h4>
+                        <div class="text-center">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <div class="plan-price">
+                                L. 12,500
+                                <small>/ pago inicial</small>
+                            </div>
+                            <p class="text-muted mb-0"><small>Activación + Mes 1 Gratis</small></p>
+                            <p class="text-muted"><small><strong>Luego L. 2,500/mes</strong></small></p>
+                            {% else %}
+                            <div class="plan-price">
+                                L. 2,500
+                                <small>/mes</small>
+                            </div>
+                            <p class="text-muted"><small><strong>+L. 500 vs Plan Básico</strong></small></p>
+                            {% endif %}
+                        </div>
+                        <ul class="feature-list">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <li><i class="fas fa-rocket"></i> <strong>Activación y configuración</strong></li>
+                            <li><i class="fas fa-star" style="color: #ffc107;"></i> <strong>Primer mes GRATIS</strong></li>
+                            {% endif %}
+                            <li><i class="fas fa-check"></i> <strong>Usuarios ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Proyectos ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Empleados, planillas, gastos</strong></li>
+                            <li><i class="fas fa-check text-success"></i> <strong>Gestión de maquinaria</strong></li>
+                            <li><i class="fas fa-check"></i> Soporte prioritario por WhatsApp</li>
+                        </ul>
+                        <button type="button" class="btn btn-success w-100 mt-3"
+                                onclick="mostrarPago('mensual_completo', {% if not empresa_actual.cuota_instalacion_pagada %}12500{% else %}2500{% endif %})">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <i class="fas fa-shopping-cart"></i> Pagar L. 12,500
+                            {% else %}
+                            Seleccionar Plan
+                            {% endif %}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Plan Anual 1 año Completo (DESTACADO) -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="pricing-card featured" id="plan-anual_1_nuevo_completo">
+                        <span class="plan-badge" style="background: #28a745;">COMPLETO</span>
+                        <div class="text-center mt-3 mb-3">
+                            {% if empresa_actual.plan_elegido == 'anual_1_nuevo_completo' %}
+                            <span class="badge bg-success">✓ TU PLAN ELEGIDO</span>
+                            {% else %}
+                            <span class="badge bg-success">RECOMENDADO</span>
+                            {% endif %}
+                        </div>
+                        <h4 class="text-center">Anual Completo (1 año)</h4>
+                        <div class="text-center">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <div class="plan-price">
+                                L. 33,375
+                                <small>/ pago único</small>
+                            </div>
+                            <p class="text-muted mb-0"><small>L. 2,125/mes x 11 meses + mes 1 gratis</small></p>
+                            <div class="savings-badge">
+                                <i class="fas fa-piggy-bank"></i> Ahorra L. 4,125
+                            </div>
+                            {% else %}
+                            <div class="plan-price">
+                                L. 23,375
+                                <small>/ 11 meses</small>
+                            </div>
+                            <p class="text-muted">L. 2,125/mes</p>
+                            <div class="savings-badge">
+                                <i class="fas fa-piggy-bank"></i> Ahorra L. 4,125
+                            </div>
+                            {% endif %}
+                        </div>
+                        <ul class="feature-list">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <li><i class="fas fa-rocket"></i> <strong>Activación y configuración</strong></li>
+                            <li><i class="fas fa-star" style="color: #ffc107;"></i> <strong>Primer mes GRATIS</strong></li>
+                            {% endif %}
+                            <li><i class="fas fa-check"></i> <strong>Usuarios ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Proyectos ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Empleados, planillas, gastos</strong></li>
+                            <li><i class="fas fa-check text-success"></i> <strong>Gestión de maquinaria</strong></li>
+                            <li><i class="fas fa-check"></i> Soporte prioritario por WhatsApp</li>
+                        </ul>
+                        <button type="button" class="btn btn-success w-100 mt-3"
+                                onclick="mostrarPago('anual_1_completo', {% if not empresa_actual.cuota_instalacion_pagada %}33375{% else %}23375{% endif %})">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <i class="fas fa-shopping-cart"></i> Pagar L. 33,375
+                            {% else %}
+                            Seleccionar Plan
+                            {% endif %}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Plan Bianual 2 años Completo -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="pricing-card {% if empresa_actual.plan_elegido == 'anual_2_nuevo_completo' %}featured{% endif %}" id="plan-anual_2_nuevo_completo">
+                        <span class="plan-badge" style="background: #28a745;">COMPLETO</span>
+                        <div class="text-center mt-3 mb-3">
+                            {% if empresa_actual.plan_elegido == 'anual_2_nuevo_completo' %}
+                            <span class="badge bg-success">✓ TU PLAN ELEGIDO</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">MÁXIMO AHORRO</span>
+                            {% endif %}
+                        </div>
+                        <h4 class="text-center">Bianual Completo (2 años)</h4>
+                        <div class="text-center">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <div class="plan-price">
+                                L. 58,875
+                                <small>/ pago único</small>
+                            </div>
+                            <p class="text-muted mb-0"><small>L. 2,125/mes x 23 meses + mes 1 gratis</small></p>
+                            <div class="savings-badge">
+                                <i class="fas fa-piggy-bank"></i> Ahorra L. 8,625
+                            </div>
+                            {% else %}
+                            <div class="plan-price">
+                                L. 48,875
+                                <small>/ 23 meses</small>
+                            </div>
+                            <p class="text-muted">L. 2,125/mes</p>
+                            <div class="savings-badge">
+                                <i class="fas fa-piggy-bank"></i> Ahorra L. 8,625
+                            </div>
+                            {% endif %}
+                        </div>
+                        <ul class="feature-list">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <li><i class="fas fa-rocket"></i> <strong>Activación y configuración</strong></li>
+                            <li><i class="fas fa-star" style="color: #ffc107;"></i> <strong>Primer mes GRATIS</strong></li>
+                            {% endif %}
+                            <li><i class="fas fa-check"></i> <strong>Usuarios ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Proyectos ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Empleados, planillas, gastos</strong></li>
+                            <li><i class="fas fa-check text-success"></i> <strong>Gestión de maquinaria</strong></li>
+                            <li><i class="fas fa-check"></i> Soporte prioritario por WhatsApp</li>
+                        </ul>
+                        <button type="button" class="btn btn-success w-100 mt-3"
+                                onclick="mostrarPago('anual_2_completo', {% if not empresa_actual.cuota_instalacion_pagada %}58875{% else %}48875{% endif %})">
+                            {% if not empresa_actual.cuota_instalacion_pagada %}
+                            <i class="fas fa-shopping-cart"></i> Pagar L. 58,875
+                            {% else %}
+                            Seleccionar Plan
+                            {% endif %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información de Pago -->
+            <div class="payment-info" id="paymentInfo" style="display: none;">
+                <h4><i class="fas fa-credit-card"></i> Instrucciones de Pago</h4>
+                <p>Realiza tu pago a una de nuestras cuentas bancarias:</p>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="bank-account">
+                            <h5><i class="fas fa-university"></i> BAC</h5>
+                            <p class="mb-1"><strong>Cuenta:</strong> 748235275</p>
+                            <p class="mb-1"><strong>Titular:</strong> JOKSAN HANIEL PEREZ RAMOS</p>
+                            <p class="mb-0"><strong>Tipo:</strong> Ahorro</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="bank-account">
+                            <h5><i class="fas fa-university"></i> Banco de Occidente</h5>
+                            <p class="mb-1"><strong>Cuenta:</strong> 21-126-003139-7</p>
+                            <p class="mb-1"><strong>Titular:</strong> JOKSAN HANIEL PEREZ RAMOS</p>
+                            <p class="mb-0"><strong>Tipo:</strong> Ahorro</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning mt-4">
+                    <h5><i class="fas fa-exclamation-circle"></i> Después de realizar el pago:</h5>
+                    <ol class="mb-0">
+                        <li>Envía el comprobante por WhatsApp al <strong>+504 9520-6618</strong></li>
+                        <li>Incluye el nombre de tu empresa: <strong>{{ empresa_actual.nombre }}</strong></li>
+                        <li>Incluye tu RTN: <strong>{{ empresa_actual.rtn }}</strong></li>
+                        <li>Tu licencia será activada en menos de 24 horas</li>
+                    </ol>
+                </div>
+
+                <div class="text-center mt-4">
+                    <a href="{% url 'reportar_pago' empresa_actual.codigo %}" class="btn btn-primary btn-lg mb-2" style="display: block; max-width: 500px; margin: 0 auto 15px auto;">
+                        <i class="fas fa-upload"></i> Ya realicé el pago - Reportar Ahora
+                    </a>
+
+                    <p class="text-muted mb-3">O también puedes enviar tu comprobante por:</p>
+
+                    <div class="d-flex gap-2 justify-content-center flex-wrap">
+                        <a href="https://wa.me/50495206618?text=Hola,%20realicé%20el%20pago%20para%20{{ empresa_actual.nombre }}%20(RTN:%20{{ empresa_actual.rtn }})"
+                           class="btn btn-success" target="_blank">
+                            <i class="fab fa-whatsapp"></i> WhatsApp
+                        </a>
+                        <a href="mailto:joksanhaniel@gmail.com?subject=Pago%20MPP365%20-%20{{ empresa_actual.nombre }}"
+                           class="btn btn-outline-primary">
+                            <i class="fas fa-envelope"></i> Email
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contacto -->
+            <div class="mt-5 text-center">
+                <h5>¿Tienes dudas sobre los planes?</h5>
+                <p>
+                    <a href="mailto:joksanhaniel@gmail.com?subject=Consulta sobre planes MPP365 - {{ empresa_actual.nombre }}&body=Hola, tengo dudas sobre los planes de suscripción para {{ empresa_actual.nombre }} (RTN: {{ empresa_actual.rtn }})."
+                       class="text-decoration-none" style="transition: color 0.3s;">
+                        <i class="fas fa-envelope"></i> joksanhaniel@gmail.com
+                    </a>
+                    <span class="mx-2">|</span>
+                    <a href="https://wa.me/50495206618?text=Hola,%20tengo%20dudas%20sobre%20los%20planes%20de%20MPP365%20para%20{{ empresa_actual.nombre }}%20(RTN:%20{{ empresa_actual.rtn }})."
+                       class="text-decoration-none" target="_blank" style="transition: color 0.3s;">
+                        <i class="fab fa-whatsapp"></i> +504 9520-6618
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function mostrarPago(plan, monto) {
+    // Mostrar sección de información de pago
+    const paymentInfo = document.getElementById('paymentInfo');
+    paymentInfo.style.display = 'block';
+
+    // Scroll suave hacia la sección de pago
+    paymentInfo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Opcional: Mostrar confirmación
+    let planNombre = '';
+    let montoFormateado = 'L. ' + monto.toLocaleString('es-HN');
+
+    switch(plan) {
+        // Planes Básicos
+        case 'mensual_basico':
+            if (monto === 20000) {
+                planNombre = 'Plan Mensual Básico - Pago Inicial (' + montoFormateado + ')';
+            } else {
+                planNombre = 'Plan Mensual Básico (' + montoFormateado + '/mes)';
+            }
+            break;
+        case 'anual_1_basico':
+            if (monto === 39800) {
+                planNombre = 'Plan Anual 1 año Básico - Pago Completo (' + montoFormateado + ')';
+            } else {
+                planNombre = 'Plan Anual 1 año Básico (' + montoFormateado + ')';
+            }
+            break;
+        case 'anual_2_basico':
+            if (monto === 61400) {
+                planNombre = 'Plan Bianual 2 años Básico - Pago Completo (' + montoFormateado + ')';
+            } else {
+                planNombre = 'Plan Bianual 2 años Básico (' + montoFormateado + ')';
+            }
+            break;
+
+        // Planes Completos
+        case 'mensual_completo':
+            if (monto === 25500) {
+                planNombre = 'Plan Mensual Completo - Pago Inicial (' + montoFormateado + ')';
+            } else {
+                planNombre = 'Plan Mensual Completo (' + montoFormateado + '/mes)';
+            }
+            break;
+        case 'anual_1_completo':
+            if (monto === 45300) {
+                planNombre = 'Plan Anual 1 año Completo - Pago Completo (' + montoFormateado + ')';
+            } else {
+                planNombre = 'Plan Anual 1 año Completo (' + montoFormateado + ')';
+            }
+            break;
+        case 'anual_2_completo':
+            if (monto === 72900) {
+                planNombre = 'Plan Bianual 2 años Completo - Pago Completo (' + montoFormateado + ')';
+            } else {
+                planNombre = 'Plan Bianual 2 años Completo (' + montoFormateado + ')';
+            }
+            break;
+
+        // Legacy plans (for backward compatibility)
+        case 'mensual':
+            if (monto === 20000 || monto === 25500) {
+                planNombre = 'Plan Mensual - Pago Inicial (' + montoFormateado + ')';
+            } else {
+                planNombre = 'Plan Mensual (' + montoFormateado + '/mes)';
+            }
+            break;
+        case 'anual_1':
+            planNombre = 'Plan Anual 1 año (' + montoFormateado + ')';
+            break;
+        case 'anual_2':
+            planNombre = 'Plan Bianual 2 años (' + montoFormateado + ')';
+            break;
+    }
+
+    // Mostrar alerta de confirmación
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+    alertDiv.innerHTML = `
+        <i class="fas fa-check-circle"></i> Has seleccionado: <strong>${planNombre}</strong><br>
+        <small>Monto total a pagar: <strong>${montoFormateado}</strong></small>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    paymentInfo.insertBefore(alertDiv, paymentInfo.firstChild);
+}
+
+function scrollToPlanElegido() {
+    // Obtener el plan elegido del atributo data
+    const planElegido = '{{ empresa_actual.plan_elegido }}';
+    if (planElegido) {
+        const planCard = document.getElementById('plan-' + planElegido);
+        if (planCard) {
+            planCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Resaltar brevemente con animación
+            planCard.style.transition = 'all 0.3s ease';
+            planCard.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                planCard.style.transform = 'scale(1)';
+            }, 500);
+        }
+    }
+}
+</script>
+{% endblock %}

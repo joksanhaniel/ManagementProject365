@@ -4,7 +4,8 @@ from django.utils.html import format_html
 from .models import (
     Cliente, Proveedor, Empleado, Proyecto, AsignacionEmpleado, Planilla,
     DetallePlanilla, Gasto, Pago, Usuario, OrdenCambio, Deduccion,
-    Bonificacion, HoraExtra, HistorialSalario
+    Bonificacion, HoraExtra, HistorialSalario, Empresa, RegistroTrial,
+    PagoRecibido
 )
 
 
@@ -424,3 +425,162 @@ class HistorialSalarioAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # No permitir eliminar historial
         return False
+
+
+@admin.register(Empresa)
+class EmpresaAdmin(admin.ModelAdmin):
+    list_display = ('codigo', 'nombre', 'razon_social', 'rtn', 'email', 'tipo_suscripcion', 'fecha_expiracion_suscripcion', 'activa')
+    list_filter = ('activa', 'tipo_suscripcion', 'estado_suscripcion', 'fecha_expiracion_suscripcion')
+    search_fields = ('codigo', 'nombre', 'razon_social', 'rtn', 'email')
+    readonly_fields = ('codigo', 'fecha_creacion', 'fecha_modificacion', 'ip_registro')
+
+    fieldsets = (
+        ('Información de la Empresa', {
+            'fields': ('codigo', 'nombre', 'razon_social', 'rtn', 'telefono', 'email', 'direccion')
+        }),
+        ('Suscripción', {
+            'fields': ('plan_elegido', 'tipo_suscripcion', 'estado_suscripcion', 'fecha_inicio_suscripcion', 'fecha_expiracion_suscripcion', 'cuota_instalacion_pagada', 'plan_incluye_maquinaria', 'activa')
+        }),
+        ('Seguridad y Registro', {
+            'fields': ('ip_registro', 'fecha_creacion', 'fecha_modificacion')
+        }),
+    )
+
+
+@admin.register(RegistroTrial)
+class RegistroTrialAdmin(admin.ModelAdmin):
+    list_display = ('email_empresa', 'email_usuario', 'ip_address', 'rtn', 'fecha_registro', 'bloqueado', 'empresa_creada')
+    list_filter = ('bloqueado', 'fecha_registro')
+    search_fields = ('email_empresa', 'email_usuario', 'ip_address', 'rtn')
+    readonly_fields = ('fecha_registro',)
+    date_hierarchy = 'fecha_registro'
+
+    fieldsets = (
+        ('Información de Registro', {
+            'fields': ('ip_address', 'email_empresa', 'email_usuario', 'rtn', 'empresa_creada')
+        }),
+        ('Fecha', {
+            'fields': ('fecha_registro',)
+        }),
+        ('Control de Abuso', {
+            'fields': ('bloqueado', 'motivo_bloqueo')
+        }),
+    )
+
+    def get_readonly_fields(self, request, obj=None):
+        # Hacer todos los campos readonly excepto bloqueado y motivo_bloqueo
+        if obj:  # Editando un registro existente
+            return self.readonly_fields + ('ip_address', 'email_empresa', 'email_usuario', 'rtn', 'empresa_creada')
+        return self.readonly_fields
+
+
+@admin.register(PagoRecibido)
+class PagoRecibidoAdmin(admin.ModelAdmin):
+    list_display = (
+        'empresa',
+        'monto_formateado',
+        'plan_seleccionado_corto',
+        'fecha_pago',
+        'metodo_pago',
+        'estado_badge',
+        'fecha_registro'
+    )
+    list_filter = ('estado', 'metodo_pago', 'plan_seleccionado', 'fecha_pago', 'fecha_registro')
+    search_fields = ('empresa__nombre', 'empresa__rtn', 'referencia', 'notas_cliente', 'notas_admin')
+    readonly_fields = ('fecha_registro', 'fecha_confirmacion', 'confirmado_por', 'ver_comprobante')
+    date_hierarchy = 'fecha_pago'
+    actions = ['confirmar_pagos_seleccionados', 'rechazar_pagos_seleccionados']
+
+    fieldsets = (
+        ('Información del Pago', {
+            'fields': ('empresa', 'monto', 'fecha_pago', 'metodo_pago', 'plan_seleccionado')
+        }),
+        ('Comprobante', {
+            'fields': ('comprobante', 'ver_comprobante', 'referencia', 'notas_cliente')
+        }),
+        ('Estado y Gestión', {
+            'fields': ('estado', 'notas_admin', 'fecha_registro', 'fecha_confirmacion', 'confirmado_por')
+        }),
+    )
+
+    def monto_formateado(self, obj):
+        return f"L. {obj.monto:,.2f}"
+    monto_formateado.short_description = 'Monto'
+    monto_formateado.admin_order_field = 'monto'
+
+    def plan_seleccionado_corto(self, obj):
+        # Mostrar versión corta del plan
+        plan_map = {
+            'mensual_nuevo_basico': 'Mensual Básico (Nuevo)',
+            'anual_1_nuevo_basico': 'Anual 1 Básico (Nuevo)',
+            'anual_2_nuevo_basico': 'Bianual Básico (Nuevo)',
+            'mensual_basico': 'Mensual Básico',
+            'anual_1_basico': 'Anual 1 Básico',
+            'anual_2_basico': 'Bianual Básico',
+            'mensual_nuevo_completo': 'Mensual Completo (Nuevo)',
+            'anual_1_nuevo_completo': 'Anual 1 Completo (Nuevo)',
+            'anual_2_nuevo_completo': 'Bianual Completo (Nuevo)',
+            'mensual_completo': 'Mensual Completo',
+            'anual_1_completo': 'Anual 1 Completo',
+            'anual_2_completo': 'Bianual Completo',
+        }
+        return plan_map.get(obj.plan_seleccionado, obj.plan_seleccionado)
+    plan_seleccionado_corto.short_description = 'Plan'
+    plan_seleccionado_corto.admin_order_field = 'plan_seleccionado'
+
+    def estado_badge(self, obj):
+        colors = {
+            'pendiente': '#ffc107',  # Amarillo
+            'confirmado': '#28a745',  # Verde
+            'rechazado': '#dc3545',   # Rojo
+        }
+        color = colors.get(obj.estado, '#6c757d')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+            color,
+            obj.get_estado_display()
+        )
+    estado_badge.short_description = 'Estado'
+    estado_badge.admin_order_field = 'estado'
+
+    def ver_comprobante(self, obj):
+        if obj.comprobante:
+            return format_html(
+                '<a href="{}" target="_blank" style="color: #007bff;">📎 Ver Comprobante</a>',
+                obj.comprobante.url
+            )
+        return '-'
+    ver_comprobante.short_description = 'Comprobante'
+
+    def confirmar_pagos_seleccionados(self, request, queryset):
+        """Acción para confirmar múltiples pagos"""
+        confirmados = 0
+        for pago in queryset.filter(estado='pendiente'):
+            if pago.confirmar_pago(usuario=request.user if hasattr(request.user, 'usuario') else None):
+                confirmados += 1
+
+        self.message_user(
+            request,
+            f'{confirmados} pago(s) confirmado(s) exitosamente. Las suscripciones han sido activadas.',
+            level='success'
+        )
+    confirmar_pagos_seleccionados.short_description = '✅ Confirmar pagos seleccionados'
+
+    def rechazar_pagos_seleccionados(self, request, queryset):
+        """Acción para rechazar múltiples pagos"""
+        rechazados = queryset.filter(estado='pendiente').update(estado='rechazado')
+
+        self.message_user(
+            request,
+            f'{rechazados} pago(s) rechazado(s).',
+            level='warning'
+        )
+    rechazar_pagos_seleccionados.short_description = '❌ Rechazar pagos seleccionados'
+
+    def get_readonly_fields(self, request, obj=None):
+        # Si el pago ya está confirmado o rechazado, hacer todos los campos readonly excepto notas_admin
+        if obj and obj.estado in ['confirmado', 'rechazado']:
+            return self.readonly_fields + ('empresa', 'monto', 'fecha_pago', 'metodo_pago',
+                                          'plan_seleccionado', 'comprobante', 'referencia',
+                                          'notas_cliente', 'estado')
+        return self.readonly_fields

@@ -1,0 +1,202 @@
+{% extends 'proyectos/base.html' %}
+{% load static %}
+
+{% block title %}Reportar Pago - MPP365{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    .payment-instructions {
+        background: #f8f9fa;
+        border-left: 4px solid #667eea;
+        padding: 20px;
+        border-radius: 5px;
+        margin-bottom: 30px;
+    }
+    .bank-info {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    .bank-info h5 {
+        color: #667eea;
+        margin-bottom: 10px;
+    }
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <h2><i class="fas fa-credit-card"></i> Reportar Pago Realizado</h2>
+            <p class="text-muted">Completa el formulario con la información de tu pago</p>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <!-- Instrucciones de pago -->
+        <div class="col-lg-4 col-12">
+            <div class="payment-instructions">
+                <h5><i class="fas fa-info-circle"></i> Instrucciones</h5>
+                <p class="mb-3">Realiza tu pago a una de nuestras cuentas bancarias:</p>
+
+                <div class="bank-info">
+                    <h5><i class="fas fa-university"></i> BAC</h5>
+                    <p class="mb-1"><strong>Cuenta:</strong> 748235275</p>
+                    <p class="mb-1"><strong>Titular:</strong> JOKSAN HANIEL PEREZ RAMOS</p>
+                    <p class="mb-0"><strong>Tipo:</strong> Ahorro</p>
+                </div>
+
+                <div class="bank-info">
+                    <h5><i class="fas fa-university"></i> Banco de Occidente</h5>
+                    <p class="mb-1"><strong>Cuenta:</strong> 21-126-003139-7</p>
+                    <p class="mb-1"><strong>Titular:</strong> JOKSAN HANIEL PEREZ RAMOS</p>
+                    <p class="mb-0"><strong>Tipo:</strong> Ahorro</p>
+                </div>
+
+                <div class="alert alert-info mt-3 mb-0">
+                    <small>
+                        <i class="fas fa-clock"></i> Tu pago será revisado en las próximas <strong>24 horas</strong> y recibirás una notificación cuando sea activado.
+                    </small>
+                </div>
+            </div>
+
+            <div class="alert alert-warning">
+                <h6><i class="fas fa-exclamation-triangle"></i> Importante</h6>
+                <ul class="mb-0 small">
+                    <li>Asegúrate de subir el comprobante de pago</li>
+                    <li>Verifica que el monto sea correcto</li>
+                    <li>Incluye el número de referencia de la transacción</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Formulario -->
+        <div class="col-lg-8 col-12">
+            <div class="form-card">
+                <h4 class="mb-4"><i class="fas fa-file-invoice"></i> Datos del Pago</h4>
+
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <h6><i class="fas fa-exclamation-circle"></i> Errores en el formulario:</h6>
+                        {{ form.errors }}
+                    </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <!-- Plan seleccionado -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.plan_seleccionado.id_for_label }}" class="form-label">
+                                {{ form.plan_seleccionado.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.plan_seleccionado }}
+                            {% if form.plan_seleccionado.help_text %}
+                            <div class="help-text">{{ form.plan_seleccionado.help_text }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Monto -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.monto.id_for_label }}" class="form-label">
+                                {{ form.monto.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.monto }}
+                            {% if form.monto.help_text %}
+                            <div class="help-text">{{ form.monto.help_text }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Fecha de pago -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.fecha_pago.id_for_label }}" class="form-label">
+                                {{ form.fecha_pago.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.fecha_pago }}
+                            {% if form.fecha_pago.help_text %}
+                            <div class="help-text">{{ form.fecha_pago.help_text }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Método de pago -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.metodo_pago.id_for_label }}" class="form-label">
+                                {{ form.metodo_pago.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.metodo_pago }}
+                            {% if form.metodo_pago.help_text %}
+                            <div class="help-text">{{ form.metodo_pago.help_text }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Referencia -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.referencia.id_for_label }}" class="form-label">
+                                {{ form.referencia.label }}
+                            </label>
+                            {{ form.referencia }}
+                            {% if form.referencia.help_text %}
+                            <div class="help-text">{{ form.referencia.help_text }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Comprobante -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.comprobante.id_for_label }}" class="form-label">
+                                {{ form.comprobante.label }}
+                            </label>
+                            {{ form.comprobante }}
+                            {% if form.comprobante.help_text %}
+                            <div class="help-text">{{ form.comprobante.help_text }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Notas -->
+                        <div class="col-12 mb-3">
+                            <label for="{{ form.notas_cliente.id_for_label }}" class="form-label">
+                                {{ form.notas_cliente.label }}
+                            </label>
+                            {{ form.notas_cliente }}
+                            {% if form.notas_cliente.help_text %}
+                            <div class="help-text">{{ form.notas_cliente.help_text }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> <strong>Tu empresa:</strong> {{ empresa_actual.nombre }} (RTN: {{ empresa_actual.rtn }})
+                    </div>
+
+                    <div class="d-flex gap-3 justify-content-end mt-4">
+                        <a href="{% url 'renovar_licencia' empresa_actual.codigo %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Volver
+                        </a>
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-paper-plane"></i> Enviar Pago para Confirmación
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

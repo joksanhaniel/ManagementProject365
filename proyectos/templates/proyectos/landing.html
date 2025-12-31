@@ -1,0 +1,587 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi Project Pro 365 - Sistema de Gestión para Empresas Constructoras</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            /* Colores de construcción suaves */
+            --primary-color: #FF6B35;  /* Naranja construcción */
+            --secondary-color: #004E89; /* Azul acero */
+            --accent-color: #F7931E;    /* Amarillo herramientas */
+            --dark-blue: #1A365D;       /* Azul oscuro */
+            --light-gray: #F5F5F5;
+            --success-green: #2ECC71;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: white !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            padding: 12px 0;
+        }
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--secondary-color) !important;
+        }
+        .navbar-brand .brand-full {
+            display: inline;
+        }
+        .navbar-brand .brand-short {
+            display: none;
+        }
+        .btn-login-nav {
+            background: var(--primary-color);
+            color: white;
+            padding: 8px 25px;
+            border-radius: 25px;
+            border: none;
+            font-weight: 600;
+        }
+        .btn-login-nav:hover {
+            background: #e55a2b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+            color: white;
+        }
+
+        /* Hero Section - Más Compacto */
+        .hero-section {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--dark-blue) 100%);
+            color: white;
+            padding: 40px 0 30px;
+            text-align: center;
+        }
+        .hero-section h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .hero-section .subtitle {
+            font-size: 1rem;
+            margin-bottom: 0;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .navbar-brand .brand-full {
+                display: none;
+            }
+            .navbar-brand .brand-short {
+                display: inline;
+            }
+        }
+
+        /* Pricing Section - Más Prominente */
+        .pricing-section {
+            padding: 60px 0 80px;
+            background: var(--light-gray);
+        }
+        .pricing-section h2 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--dark-blue);
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        .pricing-card {
+            border: 2px solid #dee2e6;
+            border-radius: 15px;
+            padding: 35px 25px;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            background: white;
+            height: 100%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .pricing-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+            border-color: var(--primary-color);
+        }
+        .pricing-card.trial {
+            border-color: var(--accent-color);
+            background: linear-gradient(135deg, #FFF9E6 0%, #FFF4CC 100%);
+        }
+        .pricing-card.featured {
+            border-color: var(--success-green);
+            background: linear-gradient(135deg, #F0FFF4 0%, #E6F9EF 100%);
+            position: relative;
+        }
+        .pricing-card.featured::before {
+            content: 'RECOMENDADO';
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            background: var(--success-green);
+            color: white;
+            padding: 5px 20px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(46, 204, 113, 0.3);
+        }
+        .plan-badge {
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 6px 18px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+        .badge-trial {
+            background: var(--accent-color);
+            color: white;
+        }
+        .badge-savings {
+            background: var(--success-green);
+            color: white;
+        }
+        .plan-price {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin: 15px 0;
+        }
+        .plan-price small {
+            font-size: 1.1rem;
+            color: #6c757d;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 25px 0;
+            text-align: left;
+        }
+        .feature-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 0.95rem;
+        }
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        .feature-list i {
+            color: var(--success-green);
+            margin-right: 10px;
+            font-size: 1rem;
+        }
+        .btn-plan {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1.05rem;
+            border: none;
+            transition: all 0.3s;
+        }
+        .btn-trial {
+            background: var(--accent-color);
+            color: white;
+        }
+        .btn-trial:hover {
+            background: #e07d0f;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(247, 147, 30, 0.4);
+            color: white;
+        }
+        .btn-primary-plan {
+            background: var(--primary-color);
+            color: white;
+        }
+        .btn-primary-plan:hover {
+            background: #e55a2b;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 107, 53, 0.4);
+            color: white;
+        }
+        .btn-success-plan {
+            background: var(--success-green);
+            color: white;
+        }
+        .btn-success-plan:hover {
+            background: #27ae60;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(46, 204, 113, 0.4);
+            color: white;
+        }
+
+        /* Features Section */
+        .features-section {
+            padding: 60px 0;
+            background: white;
+        }
+        .features-section h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--dark-blue);
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        .feature-box {
+            text-align: center;
+            padding: 25px;
+        }
+        .feature-box i {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+        .feature-box h4 {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--dark-blue);
+        }
+        .feature-box p {
+            color: #6c757d;
+            font-size: 0.95rem;
+        }
+
+        /* Contact Section */
+        .contact-section {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--dark-blue) 100%);
+            color: white;
+            padding: 50px 0;
+            text-align: center;
+        }
+        .contact-section h3 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 25px;
+        }
+        .contact-section a {
+            color: white;
+            text-decoration: none;
+            font-size: 1.1rem;
+            transition: opacity 0.3s;
+        }
+        .contact-section a:hover {
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            .pricing-section h2 {
+                font-size: 1.8rem;
+            }
+            .plan-price {
+                font-size: 2.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'landing' %}">
+                <i class="fas fa-hard-hat"></i>
+                <span class="brand-full">Multi Project Pro 365</span>
+                <span class="brand-short">MPP365</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <a href="{% url 'login' %}" class="btn btn-login-nav">
+                    <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section Compacto -->
+    <section class="hero-section">
+        <div class="container">
+            <h1><i class="fas fa-hard-hat"></i> Multi Project Pro 365</h1>
+            <p class="subtitle">Sistema de Gestión para Empresas Constructoras</p>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing-section">
+        <div class="container">
+            <h2>Planes y Precios</h2>
+            <p class="text-center text-muted mb-4">Elige el plan que mejor se adapte a tu negocio</p>
+
+            <!-- Trial Plan - Full Width -->
+            <div class="row justify-content-center mb-4">
+                <div class="col-lg-8 col-md-10">
+                    <div class="pricing-card trial">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <span class="plan-badge badge-trial">
+                                    <i class="fas fa-gift"></i> MODO PRUEBA
+                                </span>
+                                <h3>Trial Gratuito - 15 Días</h3>
+                                <p class="mb-0">Prueba <strong>TODOS los módulos</strong> sin restricciones ni tarjeta de crédito</p>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <div class="plan-price mb-2">GRATIS</div>
+                                <a href="{% url 'registro_publico' %}?plan=trial" class="btn btn-trial btn-plan">
+                                    <i class="fas fa-rocket"></i> Probar Gratis
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plan Type Selector -->
+            <div class="text-center mb-4">
+                <h4 class="mb-3">Selecciona tu Plan de Suscripción</h4>
+                <p class="text-muted">Todos los planes incluyen <strong>Primer mes GRATIS</strong></p>
+            </div>
+
+            <!-- Plans Grid -->
+            <div class="row">
+                <!-- PLAN BÁSICO MENSUAL -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="pricing-card">
+                        <div class="text-center">
+                            <span class="plan-badge" style="background: #6c757d;">BÁSICO</span>
+                            <h3>Mensual Básico</h3>
+                            <div class="plan-price">
+                                L. 10,000
+                                <small>/ pago inicial</small>
+                            </div>
+                            <p class="text-muted"><small>Activación + Mes 1 Gratis</small></p>
+                            <p class="text-muted"><small><strong>Luego L. 2,000/mes</strong></small></p>
+                        </div>
+                        <ul class="feature-list">
+                            <li><i class="fas fa-star" style="color: #ffc107;"></i> <strong>Primer mes GRATIS</strong></li>
+                            <li><i class="fas fa-calendar"></i> Mes 2+: L. 2,000/mes</li>
+                            <li><i class="fas fa-check"></i> <strong>Usuarios ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Proyectos ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Empleados, planillas, gastos</strong></li>
+                            <li><i class="fas fa-times text-muted"></i> <del>Gestión de maquinaria</del></li>
+                        </ul>
+                        <a href="{% url 'registro_publico' %}?plan=mensual_nuevo_basico" class="btn btn-outline-secondary btn-plan">
+                            <i class="fas fa-shopping-cart"></i> Contratar
+                        </a>
+                    </div>
+                </div>
+
+                <!-- PLAN BÁSICO ANUAL -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="pricing-card">
+                        <div class="text-center">
+                            <span class="plan-badge" style="background: #6c757d;">BÁSICO</span>
+                            <h3>Anual Básico</h3>
+                            <div class="plan-price">
+                                L. 28,700
+                                <small>/ pago único</small>
+                            </div>
+                            <p class="text-muted"><small>12 meses - L. 1,700/mes</small></p>
+                            <span class="plan-badge badge-savings">
+                                <i class="fas fa-piggy-bank"></i> Ahorra L. 3,300
+                            </span>
+                        </div>
+                        <ul class="feature-list">
+                            <li><i class="fas fa-star" style="color: #ffc107;"></i> <strong>Primer mes GRATIS</strong></li>
+                            <li><i class="fas fa-calendar"></i> <strong>12 meses de acceso</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Usuarios ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Proyectos ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Empleados, planillas, gastos</strong></li>
+                            <li><i class="fas fa-times text-muted"></i> <del>Gestión de maquinaria</del></li>
+                        </ul>
+                        <a href="{% url 'registro_publico' %}?plan=anual_1_nuevo_basico" class="btn btn-outline-secondary btn-plan">
+                            <i class="fas fa-shopping-cart"></i> Contratar
+                        </a>
+                    </div>
+                </div>
+
+                <!-- PLAN BÁSICO BIANUAL -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="pricing-card">
+                        <div class="text-center">
+                            <span class="plan-badge" style="background: #6c757d;">BÁSICO</span>
+                            <h3>Bianual Básico</h3>
+                            <div class="plan-price">
+                                L. 49,100
+                                <small>/ pago único</small>
+                            </div>
+                            <p class="text-muted"><small>24 meses - L. 1,700/mes</small></p>
+                            <span class="plan-badge badge-savings">
+                                <i class="fas fa-piggy-bank"></i> Ahorra L. 6,900
+                            </span>
+                        </div>
+                        <ul class="feature-list">
+                            <li><i class="fas fa-star" style="color: #ffc107;"></i> <strong>Primer mes GRATIS</strong></li>
+                            <li><i class="fas fa-calendar"></i> <strong>24 meses de acceso</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Usuarios ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Proyectos ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Empleados, planillas, gastos</strong></li>
+                            <li><i class="fas fa-times text-muted"></i> <del>Gestión de maquinaria</del></li>
+                        </ul>
+                        <a href="{% url 'registro_publico' %}?plan=anual_2_nuevo_basico" class="btn btn-outline-secondary btn-plan">
+                            <i class="fas fa-shopping-cart"></i> Contratar
+                        </a>
+                    </div>
+                </div>
+
+                <!-- PLAN COMPLETO MENSUAL -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="pricing-card">
+                        <div class="text-center">
+                            <span class="plan-badge" style="background: #28a745;">COMPLETO</span>
+                            <h3>Mensual Completo</h3>
+                            <div class="plan-price">
+                                L. 12,500
+                                <small>/ pago inicial</small>
+                            </div>
+                            <p class="text-muted"><small>Activación + Mes 1 Gratis</small></p>
+                            <p class="text-muted"><small><strong>Luego L. 2,500/mes</strong></small></p>
+                        </div>
+                        <ul class="feature-list">
+                            <li><i class="fas fa-star" style="color: #ffc107;"></i> <strong>Primer mes GRATIS</strong></li>
+                            <li><i class="fas fa-calendar"></i> Mes 2+: L. 2,500/mes</li>
+                            <li><i class="fas fa-check"></i> <strong>Usuarios ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Proyectos ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Empleados, planillas, gastos</strong></li>
+                            <li><i class="fas fa-check text-success"></i> <strong>Gestión de maquinaria</strong></li>
+                        </ul>
+                        <a href="{% url 'registro_publico' %}?plan=mensual_nuevo_completo" class="btn btn-success btn-plan">
+                            <i class="fas fa-shopping-cart"></i> Contratar
+                        </a>
+                    </div>
+                </div>
+
+                <!-- PLAN COMPLETO ANUAL -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="pricing-card featured">
+                        <div class="text-center">
+                            <span class="plan-badge" style="background: #28a745;">COMPLETO - RECOMENDADO</span>
+                            <h3>Anual Completo</h3>
+                            <div class="plan-price">
+                                L. 33,375
+                                <small>/ pago único</small>
+                            </div>
+                            <p class="text-muted"><small>12 meses - L. 2,125/mes</small></p>
+                            <span class="plan-badge badge-savings">
+                                <i class="fas fa-piggy-bank"></i> Ahorra L. 4,125
+                            </span>
+                        </div>
+                        <ul class="feature-list">
+                            <li><i class="fas fa-star" style="color: #ffc107;"></i> <strong>Primer mes GRATIS</strong></li>
+                            <li><i class="fas fa-calendar"></i> <strong>12 meses de acceso</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Usuarios ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Proyectos ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Empleados, planillas, gastos</strong></li>
+                            <li><i class="fas fa-check text-success"></i> <strong>Gestión de maquinaria</strong></li>
+                        </ul>
+                        <a href="{% url 'registro_publico' %}?plan=anual_1_nuevo_completo" class="btn btn-success btn-plan">
+                            <i class="fas fa-shopping-cart"></i> Contratar
+                        </a>
+                    </div>
+                </div>
+
+                <!-- PLAN COMPLETO BIANUAL -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="pricing-card">
+                        <div class="text-center">
+                            <span class="plan-badge" style="background: #28a745;">COMPLETO</span>
+                            <h3>Bianual Completo</h3>
+                            <div class="plan-price">
+                                L. 58,875
+                                <small>/ pago único</small>
+                            </div>
+                            <p class="text-muted"><small>24 meses - L. 2,125/mes</small></p>
+                            <span class="plan-badge badge-savings">
+                                <i class="fas fa-piggy-bank"></i> Ahorra L. 8,625
+                            </span>
+                        </div>
+                        <ul class="feature-list">
+                            <li><i class="fas fa-star" style="color: #ffc107;"></i> <strong>Primer mes GRATIS</strong></li>
+                            <li><i class="fas fa-calendar"></i> <strong>24 meses de acceso</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Usuarios ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Proyectos ilimitados</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Empleados, planillas, gastos</strong></li>
+                            <li><i class="fas fa-check text-success"></i> <strong>Gestión de maquinaria</strong></li>
+                        </ul>
+                        <a href="{% url 'registro_publico' %}?plan=anual_2_nuevo_completo" class="btn btn-success btn-plan">
+                            <i class="fas fa-shopping-cart"></i> Contratar
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info mt-4 text-center">
+                <i class="fas fa-info-circle"></i>
+                <strong>Importante:</strong> Al registrarte comenzarás con el <strong>Trial Gratuito de 15 días</strong>.
+                Al finalizar el trial, podrás elegir el plan que prefieras para continuar sin interrupciones.
+            </div>
+
+            <div class="alert alert-success mt-3 text-center">
+                <h5><i class="fas fa-hard-hat"></i> ¿Necesitas gestión de maquinaria?</h5>
+                <p class="mb-0">Los planes <strong>Completos</strong> incluyen: Catálogo de maquinaria, control de horómetros, registro de uso en proyectos, cálculo de costos y reportes de utilización. <strong>Solo L. 500/mes adicionales</strong>.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <div class="container">
+            <h2>¿Qué incluye Multi Project Pro 365?</h2>
+            <div class="row">
+                <div class="col-md-3 col-sm-6">
+                    <div class="feature-box">
+                        <i class="fas fa-project-diagram"></i>
+                        <h4>Gestión de Proyectos</h4>
+                        <p>Control completo de tus proyectos de construcción con seguimiento detallado</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="feature-box">
+                        <i class="fas fa-users"></i>
+                        <h4>Empleados y Planillas</h4>
+                        <p>Administra empleados, calcula planillas y gestiona pagos automáticamente</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="feature-box">
+                        <i class="fas fa-tractor"></i>
+                        <h4>Control de Maquinaria</h4>
+                        <p>Gestiona tu maquinaria, equipos y tarifas de uso en proyectos</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="feature-box">
+                        <i class="fas fa-chart-line"></i>
+                        <h4>Reportes y Análisis</h4>
+                        <p>Reportes financieros en tiempo real con cálculo de utilidades</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact-section">
+        <div class="container">
+            <h3>¿Tienes dudas? Contáctanos</h3>
+            <p>
+                <a href="mailto:joksanhaniel@gmail.com?subject=Consulta sobre Multi Project Pro 365&body=Hola, tengo una consulta sobre el sistema Multi Project Pro 365...">
+                    <i class="fas fa-envelope me-2"></i>joksanhaniel@gmail.com
+                </a>
+                <span class="mx-3">|</span>
+                <a href="https://wa.me/50495206618?text=Hola,%20tengo%20una%20consulta%20sobre%20Multi%20Project%20Pro%20365.%20Me%20gustaría%20saber%20más%20sobre%20el%20sistema." target="_blank">
+                    <i class="fab fa-whatsapp me-2"></i>+504 9520-6618
+                </a>
+            </p>
+            <p class="mt-4 mb-1" style="opacity: 0.8; font-size: 0.9rem;">&copy; 2025 Multi Project Pro 365 - Sistema de Gestión para Empresas Constructoras</p>
+            <p class="mb-0" style="opacity: 0.5; font-size: 0.75rem;">Desarrollado por LENCADEV</p>
+        </div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

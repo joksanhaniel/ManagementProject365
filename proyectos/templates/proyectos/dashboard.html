@@ -45,6 +45,34 @@
 {% endblock %}
 
 {% block content %}
+<!-- Alerta de Suscripción -->
+{% if alerta_suscripcion %}
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="alert alert-{{ alerta_suscripcion.tipo }} alert-dismissible fade show {% if alerta_suscripcion.urgente %}border-3{% endif %}" role="alert" style="{% if alerta_suscripcion.urgente %}border-left: 5px solid {% if alerta_suscripcion.tipo == 'danger' %}#dc3545{% else %}#ffc107{% endif %};{% endif %}">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div class="d-flex align-items-center mb-2 mb-md-0">
+                    <i class="{{ alerta_suscripcion.icono }} fa-2x me-3"></i>
+                    <div>
+                        <h5 class="alert-heading mb-1">{{ alerta_suscripcion.titulo }}</h5>
+                        <p class="mb-0">{{ alerta_suscripcion.mensaje }}</p>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ alerta_suscripcion.boton_url }}" class="btn btn-outline-{{ alerta_suscripcion.tipo }}">
+                        <i class="fas fa-eye"></i> Ver Planes
+                    </a>
+                    <a href="/{{ request.user.empresa.codigo }}/reportar-pago/" class="btn btn-{{ alerta_suscripcion.tipo }}">
+                        <i class="fas fa-upload"></i> Ya Pagué
+                    </a>
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row mb-4">
     <div class="col-12">
         <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
